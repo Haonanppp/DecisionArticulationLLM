@@ -1,0 +1,4 @@
+decision_id,round_index,n_alternatives,n_preferences,n_uncertainties,faithfulness,completeness,clarity,usefulness,self_expression_support,notes
+634b95d8-f9aa-427e-bf00-2ecd6e6171dc,0,5,4,6,2,2,2,2,2,3
+634b95d8-f9aa-427e-bf00-2ecd6e6171dc,1,5,7,5,1,1,1,1,1,1
+634b95d8-f9aa-427e-bf00-2ecd6e6171dc,2,4,8,4,1,1,1,1,1,1

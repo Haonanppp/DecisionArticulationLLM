@@ -1,0 +1,570 @@
+{
+  "decision_id": "634b95d8-f9aa-427e-bf00-2ecd6e6171dc",
+  "title": "Should I invest in real estate or stock or crypto?",
+  "narrative": "I have $1000 free money and wantted to invest.",
+  "rounds": [
+    {
+      "round_index": 0,
+      "questions": [],
+      "user_answers": [],
+      "structured_output": {
+        "decision_summary": "The user is deciding how to invest $1,000 of spare money and is comparing real estate, stocks, and crypto. The choice likely depends on return potential, risk, liquidity, and how practical each option is at this amount.",
+        "alternatives": [
+          {
+            "id": "A1",
+            "label": "Invest in stocks",
+            "description": "Use the $1,000 to buy stocks directly or through diversified funds. This is typically the most accessible mainstream investment option for a small amount of money.",
+            "change_type": null
+          },
+          {
+            "id": "A2",
+            "label": "Invest in crypto",
+            "description": "Allocate the money to cryptocurrencies. This option may offer high upside but also comes with substantial volatility and risk.",
+            "change_type": null
+          },
+          {
+            "id": "A3",
+            "label": "Invest in real estate",
+            "description": "Try to put the money toward real estate exposure, such as direct property investment, a fund, or another real-estate-related vehicle. With only $1,000, direct property ownership is likely impractical, so this may require an indirect route.",
+            "change_type": null
+          },
+          {
+            "id": "A4",
+            "label": "Split between options",
+            "description": "Divide the $1,000 across two or more asset types to reduce concentration risk and gain exposure to multiple markets.",
+            "change_type": null
+          },
+          {
+            "id": "A5",
+            "label": "Hold cash for now",
+            "description": "Keep the money uninvested temporarily while learning more or waiting for a clearer opportunity. This preserves liquidity and avoids making a rushed choice.",
+            "change_type": null
+          }
+        ],
+        "preferences": [
+          {
+            "id": "P1",
+            "label": "Grow money",
+            "description": "The user wants to turn the spare $1,000 into an investment that can grow in value.",
+            "source": "explicit",
+            "change_type": null
+          },
+          {
+            "id": "P2",
+            "label": "Use spare funds productively",
+            "description": "The phrase 'free money' suggests the user is looking for a way to put extra money to work rather than leave it idle.",
+            "source": "implicit",
+            "change_type": null
+          },
+          {
+            "id": "P3",
+            "label": "Compare risk and return",
+            "description": "By asking whether to invest in real estate, stocks, or crypto, the user likely cares about balancing potential gains against risk.",
+            "source": "implicit",
+            "change_type": null
+          },
+          {
+            "id": "P4",
+            "label": "Make a practical choice for a small amount",
+            "description": "Since the amount is $1,000, the user likely values options that are feasible and sensible at this scale.",
+            "source": "implicit",
+            "change_type": null
+          }
+        ],
+        "uncertainties": [
+          {
+            "id": "U1",
+            "label": "Risk tolerance",
+            "description": "It is unknown how much volatility or potential loss the user is comfortable with.",
+            "type": "personal",
+            "change_type": null
+          },
+          {
+            "id": "U2",
+            "label": "Investment horizon",
+            "description": "It is unclear whether the user wants to invest for months, years, or decades.",
+            "type": "personal",
+            "change_type": null
+          },
+          {
+            "id": "U3",
+            "label": "Need for liquidity",
+            "description": "It is unknown whether the user may need access to the $1,000 soon.",
+            "type": "personal",
+            "change_type": null
+          },
+          {
+            "id": "U4",
+            "label": "Access to real estate investment",
+            "description": "It is unclear whether the user means direct property ownership or an indirect real-estate investment vehicle.",
+            "type": "informational",
+            "change_type": null
+          },
+          {
+            "id": "U5",
+            "label": "Knowledge and experience",
+            "description": "The user's familiarity with stocks, crypto, and real estate is unknown and could affect the best choice.",
+            "type": "personal",
+            "change_type": null
+          },
+          {
+            "id": "U6",
+            "label": "Market conditions",
+            "description": "Future returns in stocks, crypto, and real estate are uncertain and depend on market performance.",
+            "type": "external",
+            "change_type": null
+          }
+        ],
+        "missing_but_relevant_information": [
+          "Risk tolerance and willingness to lose part or all of the $1,000",
+          "Investment time horizon",
+          "Need for liquidity or emergency savings status",
+          "Whether the user wants direct ownership or passive investing",
+          "Current debt level and whether high-interest debt exists",
+          "Level of investment knowledge and experience",
+          "Tax considerations and country/region",
+          "Whether the user prefers diversification over concentrating in one asset"
+        ],
+        "removed_items": null,
+        "refinement_notes": null
+      },
+      "evaluation": {
+        "round_index": 0,
+        "faithfulness": 2,
+        "completeness": 2,
+        "clarity": 2,
+        "usefulness": 2,
+        "self_expression_support": 2,
+        "notes": "3"
+      }
+    },
+    {
+      "round_index": 1,
+      "questions": [
+        {
+          "id": "Q1",
+          "question": "How long do you plan to keep this $1,000 invested, and might you need to access it soon?",
+          "target": "preferences",
+          "rationale": "Time horizon and liquidity needs strongly affect whether short-term or long-term investments make sense.",
+          "question_type": "feasibility"
+        },
+        {
+          "id": "Q2",
+          "question": "How much temporary loss could you tolerate: a small drop, a big drop, or the possibility of losing most of it?",
+          "target": "preferences",
+          "rationale": "This clarifies risk tolerance, which is central when comparing stocks, crypto, and more illiquid options.",
+          "question_type": "ranking"
+        },
+        {
+          "id": "Q3",
+          "question": "What do you mean by 'real estate' here: direct property ownership, real-estate funds/REITs, or something else?",
+          "target": "alternatives",
+          "rationale": "The real estate option may need to be reframed depending on whether the user wants direct ownership or indirect exposure.",
+          "question_type": "open-ended"
+        },
+        {
+          "id": "Q4",
+          "question": "Do you already have an emergency fund and any high-interest debt that should be handled before investing this money?",
+          "target": "mixed",
+          "rationale": "Existing financial obligations can change whether investing the $1,000 is appropriate at all and can affect the comparison among options.",
+          "question_type": "constraint"
+        },
+        {
+          "id": "Q5",
+          "question": "Would you rather put the full $1,000 into one option, or are you open to splitting it across two or more choices?",
+          "target": "preferences",
+          "rationale": "This clarifies whether diversification is important and whether a mixed strategy should be considered.",
+          "question_type": "trade-off"
+        }
+      ],
+      "user_answers": [
+        {
+          "question_id": "Q1",
+          "question_text": "How long do you plan to keep this $1,000 invested, and might you need to access it soon?",
+          "answer": "I can keep them in for 10 years"
+        },
+        {
+          "question_id": "Q2",
+          "question_text": "How much temporary loss could you tolerate: a small drop, a big drop, or the possibility of losing most of it?",
+          "answer": "I'm cool even if I lost it all"
+        },
+        {
+          "question_id": "Q3",
+          "question_text": "What do you mean by 'real estate' here: direct property ownership, real-estate funds/REITs, or something else?",
+          "answer": "direct property ownership"
+        },
+        {
+          "question_id": "Q4",
+          "question_text": "Do you already have an emergency fund and any high-interest debt that should be handled before investing this money?",
+          "answer": "yes"
+        },
+        {
+          "question_id": "Q5",
+          "question_text": "Would you rather put the full $1,000 into one option, or are you open to splitting it across two or more choices?",
+          "answer": "no I go all in for one"
+        }
+      ],
+      "structured_output": {
+        "decision_summary": "The user has $1,000 to invest and is comparing real estate, stocks, and crypto. They can keep the money invested for 10 years, are extremely risk-tolerant, already have an emergency fund and no blocking high-interest debt, want direct property ownership when they say real estate, and prefer to put the full amount into a single option rather than split it.",
+        "alternatives": [
+          {
+            "id": "A1",
+            "label": "Invest in stocks",
+            "description": "Put the $1,000 into stocks or stock funds as a long-term investment. This remains a practical, liquid option for a 10-year horizon and can be used as a single-asset all-in choice.",
+            "change_type": "revised"
+          },
+          {
+            "id": "A2",
+            "label": "Invest in crypto",
+            "description": "Allocate the full $1,000 to cryptocurrency as a high-risk, high-volatility investment. This fits the user's willingness to accept extreme downside, including the possibility of losing the full amount.",
+            "change_type": "revised"
+          },
+          {
+            "id": "A3",
+            "label": "Invest in direct property ownership",
+            "description": "Attempt direct ownership of real estate using the $1,000. Since the user specifically means direct property ownership, this option is highly constrained by the small amount available and may require saving more capital first.",
+            "change_type": "revised"
+          },
+          {
+            "id": "A4",
+            "label": "Put the full $1,000 into one chosen option",
+            "description": "Commit the entire amount to whichever single asset the user selects, rather than diversifying. This matches the user's preference to go all in on one choice.",
+            "change_type": "revised"
+          },
+          {
+            "id": "A5",
+            "label": "Hold cash for now",
+            "description": "Keep the money uninvested temporarily. This is still an available fallback, though it is less aligned with the user's willingness to take risk and their long time horizon.",
+            "change_type": "unchanged"
+          }
+        ],
+        "preferences": [
+          {
+            "id": "P1",
+            "label": "Grow money",
+            "description": "The user wants to invest the $1,000 to increase its value over time.",
+            "source": "explicit",
+            "change_type": "unchanged"
+          },
+          {
+            "id": "P2",
+            "label": "Use spare funds productively",
+            "description": "The user wants to put extra money to work rather than leave it idle.",
+            "source": "implicit",
+            "change_type": "unchanged"
+          },
+          {
+            "id": "P3",
+            "label": "High risk tolerance",
+            "description": "The user is comfortable with major temporary losses and even losing the full amount.",
+            "source": "explicit",
+            "change_type": "revised"
+          },
+          {
+            "id": "P4",
+            "label": "Long-term horizon",
+            "description": "The user plans to keep the money invested for about 10 years, making long-term growth more relevant than short-term stability.",
+            "source": "explicit",
+            "change_type": "revised"
+          },
+          {
+            "id": "P5",
+            "label": "Single-option commitment",
+            "description": "The user prefers to put the full $1,000 into one option instead of splitting it across multiple assets.",
+            "source": "explicit",
+            "change_type": "added"
+          },
+          {
+            "id": "P6",
+            "label": "Direct property ownership",
+            "description": "When considering real estate, the user means direct ownership of property rather than REITs or other indirect vehicles.",
+            "source": "explicit",
+            "change_type": "added"
+          },
+          {
+            "id": "P7",
+            "label": "Basic financial readiness",
+            "description": "The user already has an emergency fund and does not report high-interest debt that would take priority over investing.",
+            "source": "explicit",
+            "change_type": "added"
+          }
+        ],
+        "uncertainties": [
+          {
+            "id": "U1",
+            "label": "Best asset for a risk-tolerant long-term investor",
+            "description": "Even with a 10-year horizon and high risk tolerance, the relative merits of stocks versus crypto remain uncertain.",
+            "type": "external",
+            "change_type": "revised"
+          },
+          {
+            "id": "U2",
+            "label": "Feasibility of direct real estate with $1,000",
+            "description": "It remains uncertain whether direct property ownership is realistically possible with only $1,000 or whether additional capital would be needed first.",
+            "type": "informational",
+            "change_type": "revised"
+          },
+          {
+            "id": "U3",
+            "label": "Local market and tax context",
+            "description": "The user's country/region and local tax rules are unknown and could affect the choice among stocks, crypto, and real estate.",
+            "type": "informational",
+            "change_type": "unchanged"
+          },
+          {
+            "id": "U4",
+            "label": "Investment knowledge and execution ability",
+            "description": "It is unclear how much experience the user has with stocks, crypto, or real estate and whether that affects implementation quality.",
+            "type": "personal",
+            "change_type": "unchanged"
+          },
+          {
+            "id": "U5",
+            "label": "Future market performance",
+            "description": "Returns for all options remain uncertain and depend on future market conditions.",
+            "type": "external",
+            "change_type": "unchanged"
+          }
+        ],
+        "missing_but_relevant_information": [],
+        "removed_items": {
+          "alternatives": [
+            "Split between options"
+          ],
+          "preferences": [
+            "Compare risk and return",
+            "Make a practical choice for a small amount"
+          ],
+          "uncertainties": [
+            "Risk tolerance",
+            "Investment horizon",
+            "Need for liquidity",
+            "Access to real estate investment"
+          ]
+        },
+        "refinement_notes": [
+          "Updated risk tolerance to explicitly reflect willingness to lose the entire $1,000.",
+          "Reframed real estate as direct property ownership only.",
+          "Removed diversification as an active alternative because the user prefers an all-in single choice.",
+          "Added confirmation that emergency savings and high-interest debt are not blocking factors."
+        ]
+      },
+      "evaluation": {
+        "round_index": 1,
+        "faithfulness": 1,
+        "completeness": 1,
+        "clarity": 1,
+        "usefulness": 1,
+        "self_expression_support": 1,
+        "notes": "1"
+      }
+    },
+    {
+      "round_index": 2,
+      "questions": [
+        {
+          "id": "Q1",
+          "question": "What country or region are you in, and are there any tax or legal rules you already know about that could affect these choices?",
+          "target": "uncertainties",
+          "rationale": "Location and tax rules can strongly change the practicality and attractiveness of stocks, crypto, and especially direct property ownership.",
+          "question_type": "uncertainty"
+        },
+        {
+          "id": "Q2",
+          "question": "When you say you want to invest, what matters most to you over the 10 years: maximum growth, steady growth, protecting against inflation, or something else?",
+          "target": "preferences",
+          "rationale": "This helps reveal the user’s evaluation criteria, which may differ even if they are highly risk-tolerant.",
+          "question_type": "open-ended"
+        },
+        {
+          "id": "Q3",
+          "question": "For direct property ownership, do you actually want to buy property soon if possible, or are you mainly asking whether real estate is the best investment category overall?",
+          "target": "alternatives",
+          "rationale": "This clarifies whether real estate is a practical near-term option or just one of the comparison choices.",
+          "question_type": "feasibility"
+        },
+        {
+          "id": "Q4",
+          "question": "How comfortable are you with the practical side of each option: doing research and managing stock funds, handling crypto wallets/exchanges, or dealing with property management and paperwork?",
+          "target": "mixed",
+          "rationale": "Execution difficulty can matter a lot, especially when the amount is small and the user wants to go all in on one option.",
+          "question_type": "feasibility"
+        }
+      ],
+      "user_answers": [
+        {
+          "question_id": "Q1",
+          "question_text": "What country or region are you in, and are there any tax or legal rules you already know about that could affect these choices?",
+          "answer": "US, no rules"
+        },
+        {
+          "question_id": "Q2",
+          "question_text": "When you say you want to invest, what matters most to you over the 10 years: maximum growth, steady growth, protecting against inflation, or something else?",
+          "answer": "maximum growth"
+        },
+        {
+          "question_id": "Q3",
+          "question_text": "For direct property ownership, do you actually want to buy property soon if possible, or are you mainly asking whether real estate is the best investment category overall?",
+          "answer": "whether real estate is the best investment category overall?"
+        },
+        {
+          "question_id": "Q4",
+          "question_text": "How comfortable are you with the practical side of each option: doing research and managing stock funds, handling crypto wallets/exchanges, or dealing with property management and paperwork?",
+          "answer": "im comfortable with all of them"
+        }
+      ],
+      "structured_output": {
+        "decision_summary": "The user has $1,000 to invest in the US and wants to choose the best single option among stocks, crypto, and direct real estate, with a 10-year horizon and a goal of maximum growth. They are comfortable with all the practical aspects of the options, have no known tax/legal constraints, and prefer to go all in on one choice rather than split the money.",
+        "alternatives": [
+          {
+            "id": "A1",
+            "label": "Invest in stocks",
+            "description": "Put the full $1,000 into stocks or stock funds as a long-term growth investment. This remains a practical, liquid option for a 10-year horizon and fits a maximum-growth goal better than cash.",
+            "change_type": "revised"
+          },
+          {
+            "id": "A2",
+            "label": "Invest in crypto",
+            "description": "Allocate the full $1,000 to cryptocurrency as a high-risk, high-volatility growth investment. This fits the user's willingness to accept extreme downside and desire for maximum growth.",
+            "change_type": "revised"
+          },
+          {
+            "id": "A3",
+            "label": "Invest in direct property ownership",
+            "description": "Attempt direct ownership of real estate using the $1,000. This remains the user's intended meaning of real estate, but it is still likely impractical at this capital level unless the user is really asking about real estate as an asset class rather than a near-term purchase.",
+            "change_type": "revised"
+          },
+          {
+            "id": "A5",
+            "label": "Hold cash for now",
+            "description": "Keep the money uninvested temporarily. This is still available as a fallback, though it does not match the user's maximum-growth goal.",
+            "change_type": "unchanged"
+          }
+        ],
+        "preferences": [
+          {
+            "id": "P1",
+            "label": "Maximum growth",
+            "description": "Over the 10-year horizon, the user most wants the investment to grow as much as possible.",
+            "source": "explicit",
+            "change_type": "revised"
+          },
+          {
+            "id": "P2",
+            "label": "Use spare funds productively",
+            "description": "The user wants to put extra money to work rather than leave it idle.",
+            "source": "implicit",
+            "change_type": "unchanged"
+          },
+          {
+            "id": "P3",
+            "label": "Very high risk tolerance",
+            "description": "The user is comfortable with major losses, including the possibility of losing the entire $1,000.",
+            "source": "explicit",
+            "change_type": "unchanged"
+          },
+          {
+            "id": "P4",
+            "label": "Long-term horizon",
+            "description": "The user plans to keep the money invested for about 10 years, making long-term growth more relevant than short-term stability.",
+            "source": "explicit",
+            "change_type": "unchanged"
+          },
+          {
+            "id": "P5",
+            "label": "Single-option commitment",
+            "description": "The user prefers to put the full $1,000 into one option instead of splitting it across multiple assets.",
+            "source": "explicit",
+            "change_type": "unchanged"
+          },
+          {
+            "id": "P6",
+            "label": "Direct property ownership",
+            "description": "When considering real estate, the user means direct ownership of property rather than REITs or other indirect vehicles.",
+            "source": "explicit",
+            "change_type": "unchanged"
+          },
+          {
+            "id": "P7",
+            "label": "Basic financial readiness",
+            "description": "The user already has an emergency fund and does not report high-interest debt that would take priority over investing.",
+            "source": "explicit",
+            "change_type": "unchanged"
+          },
+          {
+            "id": "P8",
+            "label": "US-based context",
+            "description": "The user is in the United States, so US tax and legal conditions are the relevant default context.",
+            "source": "explicit",
+            "change_type": "added"
+          }
+        ],
+        "uncertainties": [
+          {
+            "id": "U1",
+            "label": "Best asset for maximum growth",
+            "description": "Even with a 10-year horizon, the relative long-run growth potential of stocks versus crypto remains uncertain.",
+            "type": "external",
+            "change_type": "revised"
+          },
+          {
+            "id": "U2",
+            "label": "Feasibility of direct real estate with $1,000",
+            "description": "It remains uncertain whether direct property ownership is realistically possible with only $1,000 or whether additional capital would be needed first.",
+            "type": "informational",
+            "change_type": "unchanged"
+          },
+          {
+            "id": "U3",
+            "label": "US tax and legal details",
+            "description": "The user is in the US, but specific tax circumstances and any applicable legal constraints are still not known.",
+            "type": "informational",
+            "change_type": "revised"
+          },
+          {
+            "id": "U4",
+            "label": "Future market performance",
+            "description": "Returns for all options remain uncertain and depend on future market conditions.",
+            "type": "external",
+            "change_type": "unchanged"
+          }
+        ],
+        "missing_but_relevant_information": [],
+        "removed_items": {
+          "alternatives": [
+            "A4",
+            "Split between options"
+          ],
+          "preferences": [
+            "Compare risk and return",
+            "Make a practical choice for a small amount"
+          ],
+          "uncertainties": [
+            "Investment knowledge and execution ability",
+            "Local market and tax context",
+            "Need for liquidity",
+            "Access to real estate investment"
+          ]
+        },
+        "refinement_notes": [
+          "Updated the goal from generic growth to explicit maximum growth.",
+          "Added the US location as relevant context and removed the earlier generic tax/location uncertainty in favor of a more specific US tax/legal uncertainty.",
+          "Removed execution comfort as an uncertainty because the user said they are comfortable with all options.",
+          "Adjusted the real estate alternative to reflect that the user is mainly comparing asset classes, not necessarily planning an immediate property purchase."
+        ]
+      },
+      "evaluation": {
+        "round_index": 2,
+        "faithfulness": 1,
+        "completeness": 1,
+        "clarity": 1,
+        "usefulness": 1,
+        "self_expression_support": 1,
+        "notes": "1"
+      }
+    }
+  ],
+  "metadata": {
+    "model_name": "gpt-5.4-mini"
+  }
+}

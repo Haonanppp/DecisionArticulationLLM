@@ -1,0 +1,95 @@
+from __future__ import annotations
+
+from typing import List, Literal, Optional, Dict
+from pydantic import BaseModel, Field
+
+
+PreferenceSource = Literal["explicit", "implicit"]
+UncertaintyType = Literal["external", "personal", "informational"]
+ChangeType = Literal["unchanged", "revised", "added"]
+
+
+class Alternative(BaseModel):
+    id: str
+    label: str
+    description: str
+    change_type: Optional[ChangeType] = None
+
+
+class Preference(BaseModel):
+    id: str
+    label: str
+    description: str
+    source: PreferenceSource
+    change_type: Optional[ChangeType] = None
+
+
+class Uncertainty(BaseModel):
+    id: str
+    label: str
+    description: str
+    type: UncertaintyType
+    change_type: Optional[ChangeType] = None
+
+
+class StructuredDecisionOutput(BaseModel):
+    decision_summary: str
+    alternatives: List[Alternative]
+    preferences: List[Preference]
+    uncertainties: List[Uncertainty]
+    missing_but_relevant_information: List[str] = Field(default_factory=list)
+    removed_items: Optional[Dict[str, List[str]]] = None
+    refinement_notes: Optional[List[str]] = None
+
+
+class ClarificationQuestion(BaseModel):
+    id: str
+    question: str
+    target: Literal["alternatives", "preferences", "uncertainties", "mixed"]
+    rationale: str
+    question_type: Literal[
+        "open-ended", "constraint", "trade-off", "ranking", "feasibility", "uncertainty"
+    ]
+
+
+class ClarificationQuestionSet(BaseModel):
+    round_goal: str
+    questions: List[ClarificationQuestion]
+
+
+class UserAnswer(BaseModel):
+    question_id: str
+    question_text: str
+    answer: str
+
+
+class RoundEvaluation(BaseModel):
+    round_index: int
+    faithfulness: int = Field(ge=1, le=5)
+    completeness: int = Field(ge=1, le=5)
+    clarity: int = Field(ge=1, le=5)
+    usefulness: int = Field(ge=1, le=5)
+    self_expression_support: int = Field(ge=1, le=5)
+    notes: Optional[str] = None
+
+
+class DecisionInput(BaseModel):
+    decision_id: str
+    title: str
+    narrative: str
+
+
+class RoundRecord(BaseModel):
+    round_index: int
+    questions: List[ClarificationQuestion] = Field(default_factory=list)
+    user_answers: List[UserAnswer] = Field(default_factory=list)
+    structured_output: StructuredDecisionOutput
+    evaluation: Optional[RoundEvaluation] = None
+
+
+class DecisionStudyState(BaseModel):
+    decision_id: str
+    title: str
+    narrative: str
+    rounds: List[RoundRecord] = Field(default_factory=list)
+    metadata: Dict[str, str] = Field(default_factory=dict)
