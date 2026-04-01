@@ -1,12 +1,24 @@
 from __future__ import annotations
 
-from typing import List, Literal, Optional, Dict
+from typing import Dict, List, Literal, Optional
 from pydantic import BaseModel, Field
 
 
 PreferenceSource = Literal["explicit", "implicit"]
 UncertaintyType = Literal["external", "personal", "informational"]
 ChangeType = Literal["unchanged", "revised", "added"]
+
+EthicsCategory = Literal[
+    "deception",
+    "harm",
+    "stealing",
+    "fairness",
+    "responsibility",
+    "none",
+    "unclear",
+]
+
+ImpactType = Literal["direct", "indirect"]
 
 
 class Alternative(BaseModel):
@@ -32,11 +44,29 @@ class Uncertainty(BaseModel):
     change_type: Optional[ChangeType] = None
 
 
+class EthicalIssue(BaseModel):
+    id: str
+    label: str
+    description: str
+    category: EthicsCategory
+    change_type: Optional[ChangeType] = None
+
+
+class Stakeholder(BaseModel):
+    id: str
+    label: str
+    description: str
+    impact_type: ImpactType
+    change_type: Optional[ChangeType] = None
+
+
 class StructuredDecisionOutput(BaseModel):
     decision_summary: str
     alternatives: List[Alternative]
     preferences: List[Preference]
     uncertainties: List[Uncertainty]
+    ethics: List[EthicalIssue] = Field(default_factory=list)
+    stakeholders: List[Stakeholder] = Field(default_factory=list)
     missing_but_relevant_information: List[str] = Field(default_factory=list)
     removed_items: Optional[Dict[str, List[str]]] = None
     refinement_notes: Optional[List[str]] = None
@@ -45,10 +75,24 @@ class StructuredDecisionOutput(BaseModel):
 class ClarificationQuestion(BaseModel):
     id: str
     question: str
-    target: Literal["alternatives", "preferences", "uncertainties", "mixed"]
+    target: Literal[
+        "alternatives",
+        "preferences",
+        "uncertainties",
+        "ethics",
+        "stakeholders",
+        "mixed",
+    ]
     rationale: str
     question_type: Literal[
-        "open-ended", "constraint", "trade-off", "ranking", "feasibility", "uncertainty"
+        "open-ended",
+        "constraint",
+        "trade-off",
+        "ranking",
+        "feasibility",
+        "uncertainty",
+        "ethics",
+        "stakeholder",
     ]
 
 

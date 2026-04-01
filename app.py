@@ -40,7 +40,7 @@ def apply_custom_styles() -> None:
         .main .block-container {
             padding-top: 1.5rem;
             padding-bottom: 2rem;
-            max-width: 1280px;
+            max-width: 1320px;
         }
 
         h1, h2, h3 {
@@ -65,20 +65,15 @@ def apply_custom_styles() -> None:
 
         .metric-chip {
             display: inline-block;
-            padding: 0.38rem 0.78rem;
+            padding: 0.36rem 0.74rem;
             border-radius: 999px;
             background: #eef2ff;
             border: 1px solid #c7d2fe;
             color: #312e81;
-            margin-right: 0.45rem;
-            margin-bottom: 0.45rem;
-            font-size: 0.9rem;
+            margin-right: 0.4rem;
+            margin-bottom: 0.35rem;
+            font-size: 0.88rem;
             font-weight: 600;
-        }
-
-        .small-muted {
-            color: #6b7280;
-            font-size: 0.92rem;
         }
 
         .round-badge {
@@ -90,34 +85,6 @@ def apply_custom_styles() -> None:
             font-size: 0.85rem;
             font-weight: 700;
             margin-bottom: 0.8rem;
-        }
-
-        .status-badge {
-            display: inline-block;
-            padding: 0.22rem 0.58rem;
-            border-radius: 999px;
-            font-size: 0.78rem;
-            font-weight: 700;
-            margin-bottom: 0.45rem;
-            margin-right: 0.4rem;
-        }
-
-        .status-added {
-            background: #dcfce7;
-            color: #166534;
-            border: 1px solid #86efac;
-        }
-
-        .status-revised {
-            background: #fef3c7;
-            color: #92400e;
-            border: 1px solid #fcd34d;
-        }
-
-        .status-unchanged {
-            background: #e0e7ff;
-            color: #3730a3;
-            border: 1px solid #a5b4fc;
         }
 
         .star-label {
@@ -175,12 +142,12 @@ def apply_custom_styles() -> None:
         }
 
         div[data-testid="stExpander"] summary {
-            font-weight: 700 !important;
+            font-weight: 400 !important;
             font-size: 1rem !important;
         }
 
         div[data-testid="stExpander"] summary p {
-            font-weight: 700 !important;
+            font-weight: 400 !important;
             font-size: 1rem !important;
         }
 
@@ -190,6 +157,7 @@ def apply_custom_styles() -> None:
 
         div[data-baseweb="tab-list"] {
             gap: 0.5rem;
+            flex-wrap: wrap;
         }
 
         button[data-baseweb="tab"] {
@@ -207,17 +175,17 @@ def apply_custom_styles() -> None:
         div[data-testid="stRadio"] [role="radiogroup"] {
             gap: 0.55rem !important;
         }
-        
+
         div[data-testid="stRadio"] label[data-baseweb="radio"] input {
             position: absolute !important;
             opacity: 0 !important;
             pointer-events: none !important;
         }
-        
+
         div[data-testid="stRadio"] label[data-baseweb="radio"] > div:first-child {
             display: none !important;
         }
-        
+
         div[data-testid="stRadio"] label[data-baseweb="radio"] {
             background: #f8fafc !important;
             border: 1px solid #cbd5e1 !important;
@@ -228,18 +196,18 @@ def apply_custom_styles() -> None:
             transition: all 0.15s ease !important;
             cursor: pointer !important;
         }
-        
+
         div[data-testid="stRadio"] label[data-baseweb="radio"]:hover {
             border-color: #818cf8 !important;
             background: #eef2ff !important;
         }
-        
+
         div[data-testid="stRadio"] label[data-baseweb="radio"]:has(input:checked) {
             background: linear-gradient(135deg, #4f46e5, #7c3aed) !important;
             border-color: #4f46e5 !important;
             box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.12) !important;
         }
-        
+
         div[data-testid="stRadio"] label[data-baseweb="radio"] p {
             font-size: 1rem !important;
             line-height: 1.1 !important;
@@ -247,7 +215,7 @@ def apply_custom_styles() -> None:
             font-weight: 700 !important;
             margin: 0 !important;
         }
-        
+
         div[data-testid="stRadio"] label[data-baseweb="radio"]:has(input:checked) p {
             color: white !important;
         }
@@ -305,24 +273,6 @@ def initialize_services(model_name: str):
     return initial_generator, question_generator, refiner
 
 
-def get_change_badge(change_type: str | None) -> str:
-    if not change_type:
-        return ""
-
-    mapping = {
-        "added": '<span class="status-badge status-added">Added</span>',
-        "revised": '<span class="status-badge status-revised">Revised</span>',
-        "unchanged": '<span class="status-badge status-unchanged">Unchanged</span>',
-    }
-    return mapping.get(change_type, "")
-
-def render_item_header(title: str, meta_badges: List[str] | None = None) -> None:
-    st.markdown(f"**{title}**")
-    if meta_badges:
-        html = " ".join([badge for badge in meta_badges if badge])
-        if html:
-            st.markdown(html, unsafe_allow_html=True)
-
 def render_structured_output(round_index: int, structured_output: StructuredDecisionOutput) -> None:
     st.markdown(
         f'<div class="round-badge">Round {round_index}</div>',
@@ -332,7 +282,9 @@ def render_structured_output(round_index: int, structured_output: StructuredDeci
     st.markdown("### Decision Summary")
     st.write(structured_output.decision_summary)
 
-    alt_tab, pref_tab, unc_tab = st.tabs(["Alternatives", "Preferences", "Uncertainties"])
+    alt_tab, pref_tab, unc_tab, ethics_tab, stakeholders_tab = st.tabs(
+        ["Alternatives", "Preferences", "Uncertainties", "Ethics", "Stakeholders"]
+    )
 
     with alt_tab:
         if structured_output.alternatives:
@@ -376,6 +328,36 @@ def render_structured_output(round_index: int, structured_output: StructuredDeci
                     st.write(unc.description)
         else:
             st.info("No uncertainties available.")
+
+    with ethics_tab:
+        if structured_output.ethics:
+            for issue in structured_output.ethics:
+                header_parts = [f"{issue.id}: {issue.label}"]
+                if issue.category:
+                    header_parts.append(f"[{issue.category}]")
+                if issue.change_type:
+                    header_parts.append(f"[{issue.change_type}]")
+                header = " ".join(header_parts)
+
+                with st.expander(header, expanded=True):
+                    st.write(issue.description)
+        else:
+            st.info("No ethics issues available.")
+
+    with stakeholders_tab:
+        if structured_output.stakeholders:
+            for stakeholder in structured_output.stakeholders:
+                header_parts = [f"{stakeholder.id}: {stakeholder.label}"]
+                if stakeholder.impact_type:
+                    header_parts.append(f"[{stakeholder.impact_type}]")
+                if stakeholder.change_type:
+                    header_parts.append(f"[{stakeholder.change_type}]")
+                header = " ".join(header_parts)
+
+                with st.expander(header, expanded=True):
+                    st.write(stakeholder.description)
+        else:
+            st.info("No stakeholders available.")
 
     if structured_output.missing_but_relevant_information:
         st.markdown("### Missing but Relevant Information")
@@ -594,7 +576,7 @@ def build_json_download(manager: StudyStateManager) -> tuple[bytes, str]:
 def build_csv_download(manager: StudyStateManager) -> tuple[bytes, str]:
     output = io.StringIO()
     output.write(
-        "decision_id,round_index,n_alternatives,n_preferences,n_uncertainties,"
+        "decision_id,round_index,n_alternatives,n_preferences,n_uncertainties,n_ethics,n_stakeholders,"
         "faithfulness,completeness,clarity,usefulness,self_expression_support,notes\n"
     )
 
@@ -606,6 +588,8 @@ def build_csv_download(manager: StudyStateManager) -> tuple[bytes, str]:
             str(len(round_record.structured_output.alternatives)),
             str(len(round_record.structured_output.preferences)),
             str(len(round_record.structured_output.uncertainties)),
+            str(len(round_record.structured_output.ethics)),
+            str(len(round_record.structured_output.stakeholders)),
             str(ev.faithfulness) if ev else "",
             str(ev.completeness) if ev else "",
             str(ev.clarity) if ev else "",
@@ -683,7 +667,7 @@ def main() -> None:
 
     st.title("Decision Articulation Study")
     st.markdown(
-        '<div class="app-subtitle">Explore whether iterative LLM questioning helps users better express their decision context, preferences, and uncertainties.</div>',
+        '<div class="app-subtitle">Explore whether iterative LLM questioning helps users better express alternatives, preferences, uncertainties, ethics, and stakeholders.</div>',
         unsafe_allow_html=True,
     )
 
@@ -701,7 +685,7 @@ def main() -> None:
         narrative = st.text_area(
             "Decision Narrative",
             height=220,
-            placeholder="Describe your situation, goals, constraints, concerns, and anything else that matters.",
+            placeholder="Describe your situation, goals, constraints, concerns, ethics, and who may be affected.",
         )
 
         st.markdown(

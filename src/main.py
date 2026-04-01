@@ -46,6 +46,16 @@ def display_structured_output(round_index: int, structured_output) -> None:
         print(f"- {unc.id}: {unc.label} ({unc.type})")
         print(f"  {unc.description}")
 
+    print("\nEthics:")
+    for item in structured_output.ethics:
+        print(f"- {item.id}: {item.label} ({item.category})")
+        print(f"  {item.description}")
+
+    print("\nStakeholders:")
+    for item in structured_output.stakeholders:
+        print(f"- {item.id}: {item.label} ({item.impact_type})")
+        print(f"  {item.description}")
+
     if structured_output.missing_but_relevant_information:
         print("\nMissing but Relevant Information:")
         for item in structured_output.missing_but_relevant_information:

@@ -48,7 +48,7 @@ class StudyStateManager:
     def attach_evaluation(self, round_index: int, evaluation: RoundEvaluation) -> None:
         for round_record in self.state.rounds:
             if round_record.round_index == round_index:
-                round_record.evaluation = evaluation
+                round_record.evaluation = RoundEvaluation(**evaluation.model_dump())
                 return
         raise ValueError(f"Round {round_index} not found.")
 
