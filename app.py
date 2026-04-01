@@ -142,12 +142,12 @@ def apply_custom_styles() -> None:
         }
 
         div[data-testid="stExpander"] summary {
-            font-weight: 400 !important;
+            font-weight: 700 !important;
             font-size: 1rem !important;
         }
-
+        
         div[data-testid="stExpander"] summary p {
-            font-weight: 400 !important;
+            font-weight: 700 !important;
             font-size: 1rem !important;
         }
 
