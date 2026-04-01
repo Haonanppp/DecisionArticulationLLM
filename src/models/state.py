@@ -25,7 +25,7 @@ class StudyStateManager:
         self.state.rounds.append(
             RoundRecord(
                 round_index=0,
-                structured_output=structured_output,
+                structured_output=structured_output.model_dump(),
             )
         )
 
@@ -39,9 +39,9 @@ class StudyStateManager:
         self.state.rounds.append(
             RoundRecord(
                 round_index=round_index,
-                questions=question_set.questions,
-                user_answers=user_answers,
-                structured_output=structured_output,
+                questions=[q.model_dump() for q in question_set.questions],
+                user_answers=[a.model_dump() for a in user_answers],
+                structured_output=structured_output.model_dump(),
             )
         )
 
