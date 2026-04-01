@@ -319,7 +319,7 @@ def render_structured_output(round_index: int, structured_output: StructuredDeci
                 badge = get_change_badge(alt.change_type)
                 header = f"{alt.id}: {alt.label}"
                 if badge:
-                    st.markdown(badge, unsafe_allow_html=True)
+                    header += f" · {alt.change_type}"
                 with st.expander(header, expanded=True):
                     st.write(alt.description)
         else:
@@ -328,15 +328,13 @@ def render_structured_output(round_index: int, structured_output: StructuredDeci
     with pref_tab:
         if structured_output.preferences:
             for pref in structured_output.preferences:
-                badge = get_change_badge(pref.change_type)
-                header = f"{pref.id}: {pref.label}"
-                meta_html = ""
+                header_parts = [f"{pref.id}: {pref.label}"]
                 if pref.source:
-                    meta_html += f'<span class="metric-chip">{pref.source}</span>'
-                if badge:
-                    meta_html += badge
-                if meta_html:
-                    st.markdown(meta_html, unsafe_allow_html=True)
+                    header_parts.append(pref.source)
+                if pref.change_type:
+                    header_parts.append(pref.change_type)
+
+                header = " · ".join(header_parts)
                 with st.expander(header, expanded=True):
                     st.write(pref.description)
         else:
@@ -345,15 +343,13 @@ def render_structured_output(round_index: int, structured_output: StructuredDeci
     with unc_tab:
         if structured_output.uncertainties:
             for unc in structured_output.uncertainties:
-                badge = get_change_badge(unc.change_type)
-                header = f"{unc.id}: {unc.label}"
-                meta_html = ""
+                header_parts = [f"{unc.id}: {unc.label}"]
                 if unc.type:
-                    meta_html += f'<span class="metric-chip">{unc.type}</span>'
-                if badge:
-                    meta_html += badge
-                if meta_html:
-                    st.markdown(meta_html, unsafe_allow_html=True)
+                    header_parts.append(unc.type)
+                if unc.change_type:
+                    header_parts.append(unc.change_type)
+
+                header = " · ".join(header_parts)
                 with st.expander(header, expanded=True):
                     st.write(unc.description)
         else:
@@ -373,52 +369,43 @@ def render_structured_output(round_index: int, structured_output: StructuredDeci
 def render_submitted_evaluation(round_index: int, evaluation: RoundEvaluation) -> None:
     st.markdown("### Submitted Evaluation")
     col1, col2, col3, col4, col5 = st.columns(5)
-    col1.metric("Faithfulness", "★" * evaluation.faithfulness)
-    col2.metric("Completeness", "★" * evaluation.completeness)
-    col3.metric("Clarity", "★" * evaluation.clarity)
-    col4.metric("Usefulness", "★" * evaluation.usefulness)
-    col5.metric("Self-expression", "★" * evaluation.self_expression_support)
+    col1.metric("Faithfulness", evaluation.faithfulness)
+    col2.metric("Completeness", evaluation.completeness)
+    col3.metric("Clarity", evaluation.clarity)
+    col4.metric("Usefulness", evaluation.usefulness)
+    col5.metric("Self-expression", evaluation.self_expression_support)
 
     if evaluation.notes:
         st.markdown("**Notes**")
         st.write(evaluation.notes)
 
 
-def star_rating_input(label: str, key_prefix: str) -> int:
+def numeric_rating_input(label: str, key_prefix: str) -> int:
     st.markdown(f'<div class="star-label">{label}</div>', unsafe_allow_html=True)
-
-    star_options = [
-        "★☆☆☆☆",
-        "★★☆☆☆",
-        "★★★☆☆",
-        "★★★★☆",
-        "★★★★★",
-    ]
 
     selected = st.radio(
         label,
-        options=star_options,
+        options=[1, 2, 3, 4, 5],
         index=2,
         key=key_prefix,
         horizontal=True,
         label_visibility="collapsed",
     )
-
-    return star_options.index(selected) + 1
+    return int(selected)
 
 
 def render_rating_form(round_index: int) -> None:
     st.markdown("### Evaluation")
     st.markdown(
-        '<div class="star-note">Click one of the five star levels for each criterion.</div>',
+        '<div class="star-note">Select a score from 1 to 5 for each criterion.</div>',
         unsafe_allow_html=True,
     )
 
-    faithfulness = star_rating_input("Faithfulness to your real situation", f"faithfulness_{round_index}")
-    completeness = star_rating_input("Completeness", f"completeness_{round_index}")
-    clarity = star_rating_input("Clarity", f"clarity_{round_index}")
-    usefulness = star_rating_input("Usefulness for decision-making", f"usefulness_{round_index}")
-    self_expression_support = star_rating_input("Helped you express what you meant", f"self_expression_support_{round_index}")
+    faithfulness = numeric_rating_input("Faithfulness to your real situation", f"faithfulness_{round_index}")
+    completeness = numeric_rating_input("Completeness", f"completeness_{round_index}")
+    clarity = numeric_rating_input("Clarity", f"clarity_{round_index}")
+    usefulness = numeric_rating_input("Usefulness for decision-making", f"usefulness_{round_index}")
+    self_expression_support = numeric_rating_input("Helped you express what you meant", f"self_expression_support_{round_index}")
 
     notes = st.text_area(
         "Optional notes",
