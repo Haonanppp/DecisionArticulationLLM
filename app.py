@@ -415,8 +415,8 @@ def render_rating_label(label: str, rubric_key: str) -> None:
     )
 
 
-def numeric_rating_input(label: str, key_prefix: str) -> int:
-    st.markdown(f'<div class="star-label">{label}</div>', unsafe_allow_html=True)
+def numeric_rating_input(label: str, key_prefix: str, rubric_key: str) -> int:
+    render_rating_label(label, rubric_key)
 
     selected = st.radio(
         label,
@@ -436,11 +436,31 @@ def render_rating_form(round_index: int) -> None:
         unsafe_allow_html=True,
     )
 
-    faithfulness = numeric_rating_input("Faithfulness to your real situation", f"faithfulness_{round_index}")
-    completeness = numeric_rating_input("Completeness", f"completeness_{round_index}")
-    clarity = numeric_rating_input("Clarity", f"clarity_{round_index}")
-    usefulness = numeric_rating_input("Usefulness for decision-making", f"usefulness_{round_index}")
-    self_expression_support = numeric_rating_input("Helped you express what you meant", f"self_expression_support_{round_index}")
+    faithfulness = numeric_rating_input(
+        "Faithfulness to your real situation",
+        f"faithfulness_{round_index}",
+        "faithfulness",
+    )
+    completeness = numeric_rating_input(
+        "Completeness",
+        f"completeness_{round_index}",
+        "completeness",
+    )
+    clarity = numeric_rating_input(
+        "Clarity",
+        f"clarity_{round_index}",
+        "clarity",
+    )
+    usefulness = numeric_rating_input(
+        "Usefulness for decision-making",
+        f"usefulness_{round_index}",
+        "usefulness",
+    )
+    self_expression_support = numeric_rating_input(
+        "Helped you express what you meant",
+        f"self_expression_support_{round_index}",
+        "self_expression_support",
+    )
 
     notes = st.text_area(
         "Optional notes",
