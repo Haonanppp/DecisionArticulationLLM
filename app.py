@@ -38,7 +38,7 @@ def apply_custom_styles() -> None:
         """
         <style>
         .main .block-container {
-            padding-top: 1.6rem;
+            padding-top: 1.5rem;
             padding-bottom: 2rem;
             max-width: 1280px;
         }
@@ -51,14 +51,14 @@ def apply_custom_styles() -> None:
             font-size: 1.02rem;
             color: #6b7280;
             margin-top: -0.45rem;
-            margin-bottom: 1.4rem;
+            margin-bottom: 1.35rem;
         }
 
         .section-card {
             background: #ffffff;
             border: 1px solid #e5e7eb;
             border-radius: 20px;
-            padding: 1.2rem 1.2rem 1rem 1.2rem;
+            padding: 1.15rem 1.15rem 1rem 1.15rem;
             margin-bottom: 1rem;
             box-shadow: 0 4px 14px rgba(0, 0, 0, 0.05);
         }
@@ -98,8 +98,8 @@ def apply_custom_styles() -> None:
             border-radius: 999px;
             font-size: 0.78rem;
             font-weight: 700;
-            margin-left: 0.45rem;
-            vertical-align: middle;
+            margin-bottom: 0.45rem;
+            margin-right: 0.4rem;
         }
 
         .status-added {
@@ -121,9 +121,16 @@ def apply_custom_styles() -> None:
         }
 
         .star-label {
-            font-weight: 600;
-            margin-bottom: 0.4rem;
-            margin-top: 0.8rem;
+            font-weight: 700;
+            margin-bottom: 0.35rem;
+            margin-top: 0.85rem;
+            font-size: 0.98rem;
+        }
+
+        .star-note {
+            color: #6b7280;
+            font-size: 0.88rem;
+            margin-top: -0.1rem;
         }
 
         .stButton > button {
@@ -160,19 +167,21 @@ def apply_custom_styles() -> None:
             border: 1px solid #cbd5e1 !important;
         }
 
-        .stSelectbox > div > div,
-        .stSlider {
-            border-radius: 12px !important;
-        }
-
         div[data-testid="stExpander"] {
             border-radius: 14px !important;
             border: 1px solid #dbe2ea !important;
             background: #fafafa !important;
+            margin-bottom: 0.7rem !important;
         }
 
-        button[kind="secondary"] {
-            border-radius: 12px !important;
+        div[data-testid="stExpander"] summary {
+            font-weight: 700 !important;
+            font-size: 1rem !important;
+        }
+
+        div[data-testid="stExpander"] summary p {
+            font-weight: 700 !important;
+            font-size: 1rem !important;
         }
 
         section[data-testid="stSidebar"] {
@@ -195,10 +204,37 @@ def apply_custom_styles() -> None:
             font-weight: 700 !important;
         }
 
-        .star-note {
-            color: #6b7280;
-            font-size: 0.88rem;
-            margin-top: -0.1rem;
+        div[data-testid="stRadio"] [role="radiogroup"] {
+            gap: 0.5rem !important;
+        }
+
+        div[data-testid="stRadio"] label[data-baseweb="radio"] input {
+            display: none !important;
+        }
+
+        div[data-testid="stRadio"] label[data-baseweb="radio"] > div:first-child {
+            display: none !important;
+        }
+
+        div[data-testid="stRadio"] label[data-baseweb="radio"] {
+            background: #f8fafc !important;
+            border: 1px solid #dbe2ea !important;
+            border-radius: 12px !important;
+            padding: 0.35rem 0.7rem !important;
+            min-width: 92px;
+            justify-content: center !important;
+        }
+
+        div[data-testid="stRadio"] label[data-baseweb="radio"][aria-checked="true"] {
+            background: #fff7ed !important;
+            border: 1px solid #fdba74 !important;
+        }
+
+        div[data-testid="stRadio"] label[data-baseweb="radio"] p {
+            font-size: 1.15rem !important;
+            line-height: 1.1 !important;
+            color: #f59e0b !important;
+            font-weight: 700 !important;
         }
         </style>
         """,
@@ -257,10 +293,11 @@ def initialize_services(model_name: str):
 def get_change_badge(change_type: str | None) -> str:
     if not change_type:
         return ""
+
     mapping = {
-        "added": ('<span class="status-badge status-added">● Added</span>'),
-        "revised": ('<span class="status-badge status-revised">● Revised</span>'),
-        "unchanged": ('<span class="status-badge status-unchanged">● Unchanged</span>'),
+        "added": '<span class="status-badge status-added">Added</span>',
+        "revised": '<span class="status-badge status-revised">Revised</span>',
+        "unchanged": '<span class="status-badge status-unchanged">Unchanged</span>',
     }
     return mapping.get(change_type, "")
 
@@ -280,9 +317,10 @@ def render_structured_output(round_index: int, structured_output: StructuredDeci
         if structured_output.alternatives:
             for alt in structured_output.alternatives:
                 badge = get_change_badge(alt.change_type)
-                title_html = f"{alt.id}: {alt.label} {badge}"
-                st.markdown(title_html, unsafe_allow_html=True)
-                with st.expander("View details", expanded=True):
+                header = f"{alt.id}: {alt.label}"
+                if badge:
+                    st.markdown(badge, unsafe_allow_html=True)
+                with st.expander(header, expanded=True):
                     st.write(alt.description)
         else:
             st.info("No alternatives available.")
@@ -291,10 +329,15 @@ def render_structured_output(round_index: int, structured_output: StructuredDeci
         if structured_output.preferences:
             for pref in structured_output.preferences:
                 badge = get_change_badge(pref.change_type)
-                source_text = f'<span class="metric-chip">{pref.source}</span>' if pref.source else ""
-                st.markdown(f"{pref.id}: {pref.label} {badge}", unsafe_allow_html=True)
-                st.markdown(source_text, unsafe_allow_html=True)
-                with st.expander("View details", expanded=True):
+                header = f"{pref.id}: {pref.label}"
+                meta_html = ""
+                if pref.source:
+                    meta_html += f'<span class="metric-chip">{pref.source}</span>'
+                if badge:
+                    meta_html += badge
+                if meta_html:
+                    st.markdown(meta_html, unsafe_allow_html=True)
+                with st.expander(header, expanded=True):
                     st.write(pref.description)
         else:
             st.info("No preferences available.")
@@ -303,10 +346,15 @@ def render_structured_output(round_index: int, structured_output: StructuredDeci
         if structured_output.uncertainties:
             for unc in structured_output.uncertainties:
                 badge = get_change_badge(unc.change_type)
-                type_text = f'<span class="metric-chip">{unc.type}</span>' if unc.type else ""
-                st.markdown(f"{unc.id}: {unc.label} {badge}", unsafe_allow_html=True)
-                st.markdown(type_text, unsafe_allow_html=True)
-                with st.expander("View details", expanded=True):
+                header = f"{unc.id}: {unc.label}"
+                meta_html = ""
+                if unc.type:
+                    meta_html += f'<span class="metric-chip">{unc.type}</span>'
+                if badge:
+                    meta_html += badge
+                if meta_html:
+                    st.markdown(meta_html, unsafe_allow_html=True)
+                with st.expander(header, expanded=True):
                     st.write(unc.description)
         else:
             st.info("No uncertainties available.")
@@ -339,28 +387,32 @@ def render_submitted_evaluation(round_index: int, evaluation: RoundEvaluation) -
 def star_rating_input(label: str, key_prefix: str) -> int:
     st.markdown(f'<div class="star-label">{label}</div>', unsafe_allow_html=True)
 
-    options = {
-        "⭐": 1,
-        "⭐⭐": 2,
-        "⭐⭐⭐": 3,
-        "⭐⭐⭐⭐": 4,
-        "⭐⭐⭐⭐⭐": 5,
-    }
+    star_options = [
+        "★☆☆☆☆",
+        "★★☆☆☆",
+        "★★★☆☆",
+        "★★★★☆",
+        "★★★★★",
+    ]
 
     selected = st.radio(
         label,
-        options=list(options.keys()),
+        options=star_options,
         index=2,
         key=key_prefix,
         horizontal=True,
         label_visibility="collapsed",
     )
-    return options[selected]
+
+    return star_options.index(selected) + 1
 
 
 def render_rating_form(round_index: int) -> None:
     st.markdown("### Evaluation")
-    st.markdown('<div class="star-note">Click the stars to rate each item from 1 to 5.</div>', unsafe_allow_html=True)
+    st.markdown(
+        '<div class="star-note">Click one of the five star levels for each criterion.</div>',
+        unsafe_allow_html=True,
+    )
 
     faithfulness = star_rating_input("Faithfulness to your real situation", f"faithfulness_{round_index}")
     completeness = star_rating_input("Completeness", f"completeness_{round_index}")
@@ -371,10 +423,15 @@ def render_rating_form(round_index: int) -> None:
     notes = st.text_area(
         "Optional notes",
         key=f"notes_{round_index}",
-        height=100,
+        height=90,
+        placeholder="Any comments about this round...",
     )
 
-    if st.button(f"Submit Evaluation for Round {round_index}", key=f"submit_eval_{round_index}", use_container_width=True):
+    if st.button(
+        f"Submit Evaluation for Round {round_index}",
+        key=f"submit_eval_{round_index}",
+        use_container_width=True,
+    ):
         evaluation = RoundEvaluation(
             round_index=round_index,
             faithfulness=faithfulness,
