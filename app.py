@@ -205,36 +205,51 @@ def apply_custom_styles() -> None:
         }
 
         div[data-testid="stRadio"] [role="radiogroup"] {
-            gap: 0.5rem !important;
+            gap: 0.55rem !important;
         }
-
+        
         div[data-testid="stRadio"] label[data-baseweb="radio"] input {
-            display: none !important;
+            position: absolute !important;
+            opacity: 0 !important;
+            pointer-events: none !important;
         }
-
+        
         div[data-testid="stRadio"] label[data-baseweb="radio"] > div:first-child {
             display: none !important;
         }
-
+        
         div[data-testid="stRadio"] label[data-baseweb="radio"] {
             background: #f8fafc !important;
-            border: 1px solid #dbe2ea !important;
+            border: 1px solid #cbd5e1 !important;
             border-radius: 12px !important;
-            padding: 0.35rem 0.7rem !important;
-            min-width: 92px;
+            padding: 0.42rem 0.95rem !important;
+            min-width: 62px;
             justify-content: center !important;
+            transition: all 0.15s ease !important;
+            cursor: pointer !important;
         }
-
-        div[data-testid="stRadio"] label[data-baseweb="radio"][aria-checked="true"] {
-            background: #fff7ed !important;
-            border: 1px solid #fdba74 !important;
+        
+        div[data-testid="stRadio"] label[data-baseweb="radio"]:hover {
+            border-color: #818cf8 !important;
+            background: #eef2ff !important;
         }
-
+        
+        div[data-testid="stRadio"] label[data-baseweb="radio"]:has(input:checked) {
+            background: linear-gradient(135deg, #4f46e5, #7c3aed) !important;
+            border-color: #4f46e5 !important;
+            box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.12) !important;
+        }
+        
         div[data-testid="stRadio"] label[data-baseweb="radio"] p {
-            font-size: 1.15rem !important;
+            font-size: 1rem !important;
             line-height: 1.1 !important;
-            color: #f59e0b !important;
+            color: #d97706 !important;
             font-weight: 700 !important;
+            margin: 0 !important;
+        }
+        
+        div[data-testid="stRadio"] label[data-baseweb="radio"]:has(input:checked) p {
+            color: white !important;
         }
         </style>
         """,
@@ -301,6 +316,12 @@ def get_change_badge(change_type: str | None) -> str:
     }
     return mapping.get(change_type, "")
 
+def render_item_header(title: str, meta_badges: List[str] | None = None) -> None:
+    st.markdown(f"**{title}**")
+    if meta_badges:
+        html = " ".join([badge for badge in meta_badges if badge])
+        if html:
+            st.markdown(html, unsafe_allow_html=True)
 
 def render_structured_output(round_index: int, structured_output: StructuredDecisionOutput) -> None:
     st.markdown(
@@ -316,11 +337,11 @@ def render_structured_output(round_index: int, structured_output: StructuredDeci
     with alt_tab:
         if structured_output.alternatives:
             for alt in structured_output.alternatives:
-                badge = get_change_badge(alt.change_type)
-                header = f"{alt.id}: {alt.label}"
-                if badge:
-                    header += f" · {alt.change_type}"
-                with st.expander(header, expanded=True):
+                title = f"{alt.id}: {alt.label}"
+                badges = [get_change_badge(alt.change_type)]
+                render_item_header(title, badges)
+
+                with st.expander("Show details", expanded=True):
                     st.write(alt.description)
         else:
             st.info("No alternatives available.")
@@ -328,14 +349,14 @@ def render_structured_output(round_index: int, structured_output: StructuredDeci
     with pref_tab:
         if structured_output.preferences:
             for pref in structured_output.preferences:
-                header_parts = [f"{pref.id}: {pref.label}"]
+                title = f"{pref.id}: {pref.label}"
+                badges = []
                 if pref.source:
-                    header_parts.append(pref.source)
-                if pref.change_type:
-                    header_parts.append(pref.change_type)
+                    badges.append(f'<span class="metric-chip">{pref.source}</span>')
+                badges.append(get_change_badge(pref.change_type))
+                render_item_header(title, badges)
 
-                header = " · ".join(header_parts)
-                with st.expander(header, expanded=True):
+                with st.expander("Show details", expanded=True):
                     st.write(pref.description)
         else:
             st.info("No preferences available.")
@@ -343,14 +364,14 @@ def render_structured_output(round_index: int, structured_output: StructuredDeci
     with unc_tab:
         if structured_output.uncertainties:
             for unc in structured_output.uncertainties:
-                header_parts = [f"{unc.id}: {unc.label}"]
+                title = f"{unc.id}: {unc.label}"
+                badges = []
                 if unc.type:
-                    header_parts.append(unc.type)
-                if unc.change_type:
-                    header_parts.append(unc.change_type)
+                    badges.append(f'<span class="metric-chip">{unc.type}</span>')
+                badges.append(get_change_badge(unc.change_type))
+                render_item_header(title, badges)
 
-                header = " · ".join(header_parts)
-                with st.expander(header, expanded=True):
+                with st.expander("Show details", expanded=True):
                     st.write(unc.description)
         else:
             st.info("No uncertainties available.")
