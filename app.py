@@ -3,7 +3,7 @@ from __future__ import annotations
 import io
 import json
 import uuid
-from typing import Dict, List, Optional
+from typing import Dict, List
 
 import streamlit as st
 
@@ -38,9 +38,9 @@ def apply_custom_styles() -> None:
         """
         <style>
         .main .block-container {
-            padding-top: 1.8rem;
+            padding-top: 1.6rem;
             padding-bottom: 2rem;
-            max-width: 1250px;
+            max-width: 1280px;
         }
 
         h1, h2, h3 {
@@ -51,7 +51,7 @@ def apply_custom_styles() -> None:
             font-size: 1.02rem;
             color: #6b7280;
             margin-top: -0.45rem;
-            margin-bottom: 1.5rem;
+            margin-bottom: 1.4rem;
         }
 
         .section-card {
@@ -60,18 +60,20 @@ def apply_custom_styles() -> None:
             border-radius: 20px;
             padding: 1.2rem 1.2rem 1rem 1.2rem;
             margin-bottom: 1rem;
-            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.04);
+            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.05);
         }
 
         .metric-chip {
             display: inline-block;
-            padding: 0.35rem 0.72rem;
+            padding: 0.38rem 0.78rem;
             border-radius: 999px;
-            background: #f3f4f6;
-            border: 1px solid #e5e7eb;
+            background: #eef2ff;
+            border: 1px solid #c7d2fe;
+            color: #312e81;
             margin-right: 0.45rem;
             margin-bottom: 0.45rem;
             font-size: 0.9rem;
+            font-weight: 600;
         }
 
         .small-muted {
@@ -81,39 +83,122 @@ def apply_custom_styles() -> None:
 
         .round-badge {
             display: inline-block;
-            padding: 0.25rem 0.65rem;
+            padding: 0.28rem 0.72rem;
             border-radius: 999px;
             background: #eef2ff;
             color: #3730a3;
             font-size: 0.85rem;
+            font-weight: 700;
+            margin-bottom: 0.8rem;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 0.22rem 0.58rem;
+            border-radius: 999px;
+            font-size: 0.78rem;
+            font-weight: 700;
+            margin-left: 0.45rem;
+            vertical-align: middle;
+        }
+
+        .status-added {
+            background: #dcfce7;
+            color: #166534;
+            border: 1px solid #86efac;
+        }
+
+        .status-revised {
+            background: #fef3c7;
+            color: #92400e;
+            border: 1px solid #fcd34d;
+        }
+
+        .status-unchanged {
+            background: #e0e7ff;
+            color: #3730a3;
+            border: 1px solid #a5b4fc;
+        }
+
+        .star-label {
             font-weight: 600;
-            margin-bottom: 0.7rem;
+            margin-bottom: 0.4rem;
+            margin-top: 0.8rem;
         }
 
         .stButton > button {
             border-radius: 12px;
-            padding: 0.55rem 1rem;
-            font-weight: 600;
+            padding: 0.58rem 1rem;
+            font-weight: 700;
+            border: none;
+            background: linear-gradient(135deg, #4f46e5, #7c3aed);
+            color: white;
+        }
+
+        .stButton > button:hover {
+            background: linear-gradient(135deg, #4338ca, #6d28d9);
+            color: white;
         }
 
         .stDownloadButton > button {
             border-radius: 12px;
-            padding: 0.55rem 1rem;
-            font-weight: 600;
+            padding: 0.58rem 1rem;
+            font-weight: 700;
+            border: none;
+            background: linear-gradient(135deg, #0f766e, #0891b2);
+            color: white;
+        }
+
+        .stDownloadButton > button:hover {
+            background: linear-gradient(135deg, #115e59, #0e7490);
+            color: white;
         }
 
         .stTextInput > div > div > input,
         .stTextArea textarea {
             border-radius: 12px !important;
+            border: 1px solid #cbd5e1 !important;
+        }
+
+        .stSelectbox > div > div,
+        .stSlider {
+            border-radius: 12px !important;
         }
 
         div[data-testid="stExpander"] {
             border-radius: 14px !important;
-            border: 1px solid #e5e7eb !important;
+            border: 1px solid #dbe2ea !important;
+            background: #fafafa !important;
+        }
+
+        button[kind="secondary"] {
+            border-radius: 12px !important;
         }
 
         section[data-testid="stSidebar"] {
             border-right: 1px solid #e5e7eb;
+        }
+
+        div[data-baseweb="tab-list"] {
+            gap: 0.5rem;
+        }
+
+        button[data-baseweb="tab"] {
+            border-radius: 12px !important;
+            background: #f3f4f6 !important;
+            padding: 0.45rem 0.9rem !important;
+        }
+
+        button[data-baseweb="tab"][aria-selected="true"] {
+            background: #e0e7ff !important;
+            color: #312e81 !important;
+            font-weight: 700 !important;
+        }
+
+        .star-note {
+            color: #6b7280;
+            font-size: 0.88rem;
+            margin-top: -0.1rem;
         }
         </style>
         """,
@@ -169,6 +254,17 @@ def initialize_services(model_name: str):
     return initial_generator, question_generator, refiner
 
 
+def get_change_badge(change_type: str | None) -> str:
+    if not change_type:
+        return ""
+    mapping = {
+        "added": ('<span class="status-badge status-added">● Added</span>'),
+        "revised": ('<span class="status-badge status-revised">● Revised</span>'),
+        "unchanged": ('<span class="status-badge status-unchanged">● Unchanged</span>'),
+    }
+    return mapping.get(change_type, "")
+
+
 def render_structured_output(round_index: int, structured_output: StructuredDecisionOutput) -> None:
     st.markdown(
         f'<div class="round-badge">Round {round_index}</div>',
@@ -178,44 +274,39 @@ def render_structured_output(round_index: int, structured_output: StructuredDeci
     st.markdown("### Decision Summary")
     st.write(structured_output.decision_summary)
 
-    col1, col2, col3 = st.columns(3)
+    alt_tab, pref_tab, unc_tab = st.tabs(["Alternatives", "Preferences", "Uncertainties"])
 
-    with col1:
-        st.markdown("### Alternatives")
+    with alt_tab:
         if structured_output.alternatives:
             for alt in structured_output.alternatives:
-                label = f"{alt.id}: {alt.label}"
-                if alt.change_type:
-                    label += f" [{alt.change_type}]"
-                with st.expander(label, expanded=True):
+                badge = get_change_badge(alt.change_type)
+                title_html = f"{alt.id}: {alt.label} {badge}"
+                st.markdown(title_html, unsafe_allow_html=True)
+                with st.expander("View details", expanded=True):
                     st.write(alt.description)
         else:
             st.info("No alternatives available.")
 
-    with col2:
-        st.markdown("### Preferences")
+    with pref_tab:
         if structured_output.preferences:
             for pref in structured_output.preferences:
-                label = f"{pref.id}: {pref.label}"
-                if pref.source:
-                    label += f" ({pref.source})"
-                if pref.change_type:
-                    label += f" [{pref.change_type}]"
-                with st.expander(label, expanded=True):
+                badge = get_change_badge(pref.change_type)
+                source_text = f'<span class="metric-chip">{pref.source}</span>' if pref.source else ""
+                st.markdown(f"{pref.id}: {pref.label} {badge}", unsafe_allow_html=True)
+                st.markdown(source_text, unsafe_allow_html=True)
+                with st.expander("View details", expanded=True):
                     st.write(pref.description)
         else:
             st.info("No preferences available.")
 
-    with col3:
-        st.markdown("### Uncertainties")
+    with unc_tab:
         if structured_output.uncertainties:
             for unc in structured_output.uncertainties:
-                label = f"{unc.id}: {unc.label}"
-                if unc.type:
-                    label += f" ({unc.type})"
-                if unc.change_type:
-                    label += f" [{unc.change_type}]"
-                with st.expander(label, expanded=True):
+                badge = get_change_badge(unc.change_type)
+                type_text = f'<span class="metric-chip">{unc.type}</span>' if unc.type else ""
+                st.markdown(f"{unc.id}: {unc.label} {badge}", unsafe_allow_html=True)
+                st.markdown(type_text, unsafe_allow_html=True)
+                with st.expander("View details", expanded=True):
                     st.write(unc.description)
         else:
             st.info("No uncertainties available.")
@@ -234,56 +325,49 @@ def render_structured_output(round_index: int, structured_output: StructuredDeci
 def render_submitted_evaluation(round_index: int, evaluation: RoundEvaluation) -> None:
     st.markdown("### Submitted Evaluation")
     col1, col2, col3, col4, col5 = st.columns(5)
-    col1.metric("Faithfulness", evaluation.faithfulness)
-    col2.metric("Completeness", evaluation.completeness)
-    col3.metric("Clarity", evaluation.clarity)
-    col4.metric("Usefulness", evaluation.usefulness)
-    col5.metric("Self-expression", evaluation.self_expression_support)
+    col1.metric("Faithfulness", "★" * evaluation.faithfulness)
+    col2.metric("Completeness", "★" * evaluation.completeness)
+    col3.metric("Clarity", "★" * evaluation.clarity)
+    col4.metric("Usefulness", "★" * evaluation.usefulness)
+    col5.metric("Self-expression", "★" * evaluation.self_expression_support)
 
     if evaluation.notes:
         st.markdown("**Notes**")
         st.write(evaluation.notes)
 
 
+def star_rating_input(label: str, key_prefix: str) -> int:
+    st.markdown(f'<div class="star-label">{label}</div>', unsafe_allow_html=True)
+
+    options = {
+        "⭐": 1,
+        "⭐⭐": 2,
+        "⭐⭐⭐": 3,
+        "⭐⭐⭐⭐": 4,
+        "⭐⭐⭐⭐⭐": 5,
+    }
+
+    selected = st.radio(
+        label,
+        options=list(options.keys()),
+        index=2,
+        key=key_prefix,
+        horizontal=True,
+        label_visibility="collapsed",
+    )
+    return options[selected]
+
+
 def render_rating_form(round_index: int) -> None:
     st.markdown("### Evaluation")
-    st.caption("Please rate each item from 1 to 5.")
+    st.markdown('<div class="star-note">Click the stars to rate each item from 1 to 5.</div>', unsafe_allow_html=True)
 
-    faithfulness = st.slider(
-        "Faithfulness to your real situation",
-        min_value=1,
-        max_value=5,
-        value=3,
-        key=f"faithfulness_{round_index}",
-    )
-    completeness = st.slider(
-        "Completeness",
-        min_value=1,
-        max_value=5,
-        value=3,
-        key=f"completeness_{round_index}",
-    )
-    clarity = st.slider(
-        "Clarity",
-        min_value=1,
-        max_value=5,
-        value=3,
-        key=f"clarity_{round_index}",
-    )
-    usefulness = st.slider(
-        "Usefulness for decision-making",
-        min_value=1,
-        max_value=5,
-        value=3,
-        key=f"usefulness_{round_index}",
-    )
-    self_expression_support = st.slider(
-        "Helped you express what you meant",
-        min_value=1,
-        max_value=5,
-        value=3,
-        key=f"self_expression_support_{round_index}",
-    )
+    faithfulness = star_rating_input("Faithfulness to your real situation", f"faithfulness_{round_index}")
+    completeness = star_rating_input("Completeness", f"completeness_{round_index}")
+    clarity = star_rating_input("Clarity", f"clarity_{round_index}")
+    usefulness = star_rating_input("Usefulness for decision-making", f"usefulness_{round_index}")
+    self_expression_support = star_rating_input("Helped you express what you meant", f"self_expression_support_{round_index}")
+
     notes = st.text_area(
         "Optional notes",
         key=f"notes_{round_index}",
@@ -528,22 +612,6 @@ def main() -> None:
         st.session_state.custom_model_name = custom_model_name
         st.session_state.max_rounds = max_rounds
 
-        effective_model_name = get_effective_model_name()
-
-        st.markdown("---")
-        st.markdown(
-            f"""
-            <div class="section-card">
-                <div class="small-muted">Current Configuration</div>
-                <div style="margin-top:0.55rem;">
-                    <span class="metric-chip">Model: {effective_model_name}</span>
-                    <span class="metric-chip">Max Rounds: {max_rounds}</span>
-                </div>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-
         if st.button("Reset Session", use_container_width=True):
             reset_session()
 
@@ -559,32 +627,23 @@ def main() -> None:
         st.markdown('<div class="section-card">', unsafe_allow_html=True)
         st.subheader("Start a New Decision Study")
 
-        col1, col2 = st.columns([1.4, 1])
-
-        with col1:
-            title = st.text_input(
-                "Decision Title",
-                placeholder="e.g. Should I invest in stocks or crypto?",
-            )
-
-        with col2:
-            st.markdown(
-                f"""
-                <div class="section-card" style="padding:0.9rem; margin-bottom:0;">
-                    <div class="small-muted">Selected setup</div>
-                    <div style="margin-top:0.55rem;">
-                        <span class="metric-chip">Model: {effective_model_name}</span>
-                        <span class="metric-chip">Max Rounds: {st.session_state.max_rounds}</span>
-                    </div>
-                </div>
-                """,
-                unsafe_allow_html=True,
-            )
+        title = st.text_input(
+            "Decision Title",
+            placeholder="e.g. Should I invest in stocks or crypto?",
+        )
 
         narrative = st.text_area(
             "Decision Narrative",
             height=220,
             placeholder="Describe your situation, goals, constraints, concerns, and anything else that matters.",
+        )
+
+        st.markdown(
+            f"""
+            <span class="metric-chip">Model: {effective_model_name}</span>
+            <span class="metric-chip">Max Rounds: {st.session_state.max_rounds}</span>
+            """,
+            unsafe_allow_html=True,
         )
 
         if st.button("Start Study", use_container_width=True):
@@ -602,11 +661,7 @@ def main() -> None:
 
     st.markdown('<div class="section-card">', unsafe_allow_html=True)
     st.markdown("## Decision Input")
-    chip_col1, chip_col2 = st.columns([1, 1])
-    with chip_col1:
-        st.markdown(f"**Title:** {manager.state.title}")
-    with chip_col2:
-        st.markdown(f"**Narrative length:** {len(manager.state.narrative)} characters")
+    st.markdown(f"**Title:** {manager.state.title}")
     st.write(manager.state.narrative)
     st.markdown("</div>", unsafe_allow_html=True)
 
