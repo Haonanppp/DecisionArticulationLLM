@@ -337,11 +337,12 @@ def render_structured_output(round_index: int, structured_output: StructuredDeci
     with alt_tab:
         if structured_output.alternatives:
             for alt in structured_output.alternatives:
-                title = f"{alt.id}: {alt.label}"
-                badges = [get_change_badge(alt.change_type)]
-                render_item_header(title, badges)
+                header_parts = [f"{alt.id}: {alt.label}"]
+                if alt.change_type:
+                    header_parts.append(f"[{alt.change_type}]")
+                header = " ".join(header_parts)
 
-                with st.expander("Show details", expanded=True):
+                with st.expander(header, expanded=True):
                     st.write(alt.description)
         else:
             st.info("No alternatives available.")
@@ -349,14 +350,14 @@ def render_structured_output(round_index: int, structured_output: StructuredDeci
     with pref_tab:
         if structured_output.preferences:
             for pref in structured_output.preferences:
-                title = f"{pref.id}: {pref.label}"
-                badges = []
+                header_parts = [f"{pref.id}: {pref.label}"]
                 if pref.source:
-                    badges.append(f'<span class="metric-chip">{pref.source}</span>')
-                badges.append(get_change_badge(pref.change_type))
-                render_item_header(title, badges)
+                    header_parts.append(f"[{pref.source}]")
+                if pref.change_type:
+                    header_parts.append(f"[{pref.change_type}]")
+                header = " ".join(header_parts)
 
-                with st.expander("Show details", expanded=True):
+                with st.expander(header, expanded=True):
                     st.write(pref.description)
         else:
             st.info("No preferences available.")
@@ -364,14 +365,14 @@ def render_structured_output(round_index: int, structured_output: StructuredDeci
     with unc_tab:
         if structured_output.uncertainties:
             for unc in structured_output.uncertainties:
-                title = f"{unc.id}: {unc.label}"
-                badges = []
+                header_parts = [f"{unc.id}: {unc.label}"]
                 if unc.type:
-                    badges.append(f'<span class="metric-chip">{unc.type}</span>')
-                badges.append(get_change_badge(unc.change_type))
-                render_item_header(title, badges)
+                    header_parts.append(f"[{unc.type}]")
+                if unc.change_type:
+                    header_parts.append(f"[{unc.change_type}]")
+                header = " ".join(header_parts)
 
-                with st.expander("Show details", expanded=True):
+                with st.expander(header, expanded=True):
                     st.write(unc.description)
         else:
             st.info("No uncertainties available.")
