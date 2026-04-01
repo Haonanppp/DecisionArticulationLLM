@@ -1,148 +1,252 @@
 from __future__ import annotations
 
+import io
+import json
 import uuid
-from typing import List, Dict
+from typing import Dict, List, Optional
 
 import streamlit as st
 
 from src.config import (
-    DEFAULT_MAX_ROUNDS,
-    DEFAULT_MODEL_NAME,
     INITIAL_GENERATION_PROMPT_PATH,
     QUESTION_GENERATION_PROMPT_PATH,
     REFINEMENT_PROMPT_PATH,
-    LOGS_DIR,
-    PROCESSED_DIR,
 )
 from src.models.schemas import (
+    ClarificationQuestionSet,
     DecisionInput,
     RoundEvaluation,
     StructuredDecisionOutput,
-    ClarificationQuestionSet,
     UserAnswer,
 )
 from src.models.state import StudyStateManager
 from src.pipeline.initial_generator import InitialGenerator
 from src.pipeline.question_generator import QuestionGenerator
 from src.pipeline.refiner import Refiner
-from src.logging.logger import StudyLogger
-from src.logging.export import StudyExporter
 from src.utils.llm_client import OpenAILLMClient
 
 
-st.set_page_config(page_title="Decision Articulation Study", layout="wide")
+st.set_page_config(
+    page_title="Decision Articulation Study",
+    page_icon="🧭",
+    layout="wide",
+)
 
 
-def initialize_services():
-    llm_client = OpenAILLMClient(model_name=DEFAULT_MODEL_NAME)
+def apply_custom_styles() -> None:
+    st.markdown(
+        """
+        <style>
+        .main .block-container {
+            padding-top: 1.8rem;
+            padding-bottom: 2rem;
+            max-width: 1250px;
+        }
+
+        h1, h2, h3 {
+            letter-spacing: -0.02em;
+        }
+
+        .app-subtitle {
+            font-size: 1.02rem;
+            color: #6b7280;
+            margin-top: -0.45rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .section-card {
+            background: #ffffff;
+            border: 1px solid #e5e7eb;
+            border-radius: 20px;
+            padding: 1.2rem 1.2rem 1rem 1.2rem;
+            margin-bottom: 1rem;
+            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.04);
+        }
+
+        .metric-chip {
+            display: inline-block;
+            padding: 0.35rem 0.72rem;
+            border-radius: 999px;
+            background: #f3f4f6;
+            border: 1px solid #e5e7eb;
+            margin-right: 0.45rem;
+            margin-bottom: 0.45rem;
+            font-size: 0.9rem;
+        }
+
+        .small-muted {
+            color: #6b7280;
+            font-size: 0.92rem;
+        }
+
+        .round-badge {
+            display: inline-block;
+            padding: 0.25rem 0.65rem;
+            border-radius: 999px;
+            background: #eef2ff;
+            color: #3730a3;
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-bottom: 0.7rem;
+        }
+
+        .stButton > button {
+            border-radius: 12px;
+            padding: 0.55rem 1rem;
+            font-weight: 600;
+        }
+
+        .stDownloadButton > button {
+            border-radius: 12px;
+            padding: 0.55rem 1rem;
+            font-weight: 600;
+        }
+
+        .stTextInput > div > div > input,
+        .stTextArea textarea {
+            border-radius: 12px !important;
+        }
+
+        div[data-testid="stExpander"] {
+            border-radius: 14px !important;
+            border: 1px solid #e5e7eb !important;
+        }
+
+        section[data-testid="stSidebar"] {
+            border-right: 1px solid #e5e7eb;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def initialize_session_state() -> None:
+    defaults = {
+        "study_started": False,
+        "study_completed": False,
+        "decision_input": None,
+        "manager": None,
+        "current_question_set": None,
+        "current_round_index": 0,
+        "rating_submitted_rounds": set(),
+        "answers_submitted_rounds": set(),
+        "selected_model": "gpt-5.4-mini",
+        "custom_model_name": "",
+        "max_rounds": 2,
+        "download_json_bytes": None,
+        "download_csv_bytes": None,
+        "download_json_filename": None,
+        "download_csv_filename": None,
+        "initial_generator": None,
+        "question_generator": None,
+        "refiner": None,
+    }
+
+    for key, value in defaults.items():
+        if key not in st.session_state:
+            st.session_state[key] = value
+
+
+def reset_session() -> None:
+    for key in list(st.session_state.keys()):
+        del st.session_state[key]
+    st.rerun()
+
+
+def get_effective_model_name() -> str:
+    if st.session_state.selected_model == "Custom":
+        custom_name = st.session_state.custom_model_name.strip()
+        return custom_name if custom_name else "gpt-5.4-mini"
+    return st.session_state.selected_model
+
+
+def initialize_services(model_name: str):
+    llm_client = OpenAILLMClient(model_name=model_name)
     initial_generator = InitialGenerator(llm_client, INITIAL_GENERATION_PROMPT_PATH)
     question_generator = QuestionGenerator(llm_client, QUESTION_GENERATION_PROMPT_PATH)
     refiner = Refiner(llm_client, REFINEMENT_PROMPT_PATH)
     return initial_generator, question_generator, refiner
 
 
-def initialize_session_state():
-    if "study_started" not in st.session_state:
-        st.session_state.study_started = False
+def render_structured_output(round_index: int, structured_output: StructuredDecisionOutput) -> None:
+    st.markdown(
+        f'<div class="round-badge">Round {round_index}</div>',
+        unsafe_allow_html=True,
+    )
 
-    if "study_completed" not in st.session_state:
-        st.session_state.study_completed = False
-
-    if "decision_input" not in st.session_state:
-        st.session_state.decision_input = None
-
-    if "manager" not in st.session_state:
-        st.session_state.manager = None
-
-    if "current_question_set" not in st.session_state:
-        st.session_state.current_question_set = None
-
-    if "current_round_index" not in st.session_state:
-        st.session_state.current_round_index = 0
-
-    if "rating_submitted_rounds" not in st.session_state:
-        st.session_state.rating_submitted_rounds = set()
-
-    if "answers_submitted_rounds" not in st.session_state:
-        st.session_state.answers_submitted_rounds = set()
-
-    if "saved_json_path" not in st.session_state:
-        st.session_state.saved_json_path = None
-
-    if "saved_csv_path" not in st.session_state:
-        st.session_state.saved_csv_path = None
-
-
-def render_structured_output(round_index: int, structured_output: StructuredDecisionOutput):
-    st.subheader(f"Round {round_index} Structured Output")
-
-    st.markdown("**Decision Summary**")
+    st.markdown("### Decision Summary")
     st.write(structured_output.decision_summary)
 
     col1, col2, col3 = st.columns(3)
 
     with col1:
-        st.markdown("**Alternatives**")
-        for alt in structured_output.alternatives:
-            label = f"{alt.id}: {alt.label}"
-            if alt.change_type:
-                label += f" [{alt.change_type}]"
-            with st.expander(label, expanded=True):
-                st.write(alt.description)
+        st.markdown("### Alternatives")
+        if structured_output.alternatives:
+            for alt in structured_output.alternatives:
+                label = f"{alt.id}: {alt.label}"
+                if alt.change_type:
+                    label += f" [{alt.change_type}]"
+                with st.expander(label, expanded=True):
+                    st.write(alt.description)
+        else:
+            st.info("No alternatives available.")
 
     with col2:
-        st.markdown("**Preferences**")
-        for pref in structured_output.preferences:
-            label = f"{pref.id}: {pref.label}"
-            if pref.source:
-                label += f" ({pref.source})"
-            if pref.change_type:
-                label += f" [{pref.change_type}]"
-            with st.expander(label, expanded=True):
-                st.write(pref.description)
+        st.markdown("### Preferences")
+        if structured_output.preferences:
+            for pref in structured_output.preferences:
+                label = f"{pref.id}: {pref.label}"
+                if pref.source:
+                    label += f" ({pref.source})"
+                if pref.change_type:
+                    label += f" [{pref.change_type}]"
+                with st.expander(label, expanded=True):
+                    st.write(pref.description)
+        else:
+            st.info("No preferences available.")
 
     with col3:
-        st.markdown("**Uncertainties**")
-        for unc in structured_output.uncertainties:
-            label = f"{unc.id}: {unc.label}"
-            if unc.type:
-                label += f" ({unc.type})"
-            if unc.change_type:
-                label += f" [{unc.change_type}]"
-            with st.expander(label, expanded=True):
-                st.write(unc.description)
+        st.markdown("### Uncertainties")
+        if structured_output.uncertainties:
+            for unc in structured_output.uncertainties:
+                label = f"{unc.id}: {unc.label}"
+                if unc.type:
+                    label += f" ({unc.type})"
+                if unc.change_type:
+                    label += f" [{unc.change_type}]"
+                with st.expander(label, expanded=True):
+                    st.write(unc.description)
+        else:
+            st.info("No uncertainties available.")
 
     if structured_output.missing_but_relevant_information:
-        st.markdown("**Missing but Relevant Information**")
+        st.markdown("### Missing but Relevant Information")
         for item in structured_output.missing_but_relevant_information:
             st.write(f"- {item}")
 
     if structured_output.refinement_notes:
-        st.markdown("**Refinement Notes**")
+        st.markdown("### Refinement Notes")
         for note in structured_output.refinement_notes:
             st.write(f"- {note}")
 
 
-def render_questions(question_set: ClarificationQuestionSet, round_index: int):
-    st.subheader(f"Clarification Questions for Round {round_index}")
-    st.caption(question_set.round_goal)
+def render_submitted_evaluation(round_index: int, evaluation: RoundEvaluation) -> None:
+    st.markdown("### Submitted Evaluation")
+    col1, col2, col3, col4, col5 = st.columns(5)
+    col1.metric("Faithfulness", evaluation.faithfulness)
+    col2.metric("Completeness", evaluation.completeness)
+    col3.metric("Clarity", evaluation.clarity)
+    col4.metric("Usefulness", evaluation.usefulness)
+    col5.metric("Self-expression", evaluation.self_expression_support)
 
-    answers: Dict[str, str] = {}
-    for q in question_set.questions:
-        with st.expander(f"{q.id}: {q.question}", expanded=True):
-            st.write(f"**Target:** {q.target}")
-            st.write(f"**Type:** {q.question_type}")
-            st.write(f"**Why this is asked:** {q.rationale}")
-            answers[q.id] = st.text_area(
-                label=f"Answer for {q.id}",
-                key=f"answer_round_{round_index}_{q.id}",
-                height=100,
-            )
-    return answers
+    if evaluation.notes:
+        st.markdown("**Notes**")
+        st.write(evaluation.notes)
 
 
-def render_rating_form(round_index: int):
-    st.subheader(f"Evaluation for Round {round_index}")
+def render_rating_form(round_index: int) -> None:
+    st.markdown("### Evaluation")
     st.caption("Please rate each item from 1 to 5.")
 
     faithfulness = st.slider(
@@ -186,12 +290,7 @@ def render_rating_form(round_index: int):
         height=100,
     )
 
-    submitted = st.button(
-        f"Submit Evaluation for Round {round_index}",
-        key=f"submit_eval_{round_index}",
-    )
-
-    if submitted:
+    if st.button(f"Submit Evaluation for Round {round_index}", key=f"submit_eval_{round_index}", use_container_width=True):
         evaluation = RoundEvaluation(
             round_index=round_index,
             faithfulness=faithfulness,
@@ -204,34 +303,44 @@ def render_rating_form(round_index: int):
         st.session_state.manager.attach_evaluation(round_index, evaluation)
         st.session_state.rating_submitted_rounds.add(round_index)
         st.success(f"Evaluation for Round {round_index} submitted.")
+        st.rerun()
 
 
-def save_results():
-    logger = StudyLogger(LOGS_DIR)
-    exporter = StudyExporter()
+def render_questions(question_set: ClarificationQuestionSet, round_index: int) -> Dict[str, str]:
+    st.markdown(f"### Clarification Questions for Round {round_index}")
+    st.caption(question_set.round_goal)
 
-    json_path = logger.save_state(st.session_state.manager)
-    csv_path = exporter.export_round_summary_csv(
-        st.session_state.manager,
-        PROCESSED_DIR / f"{st.session_state.manager.state.decision_id}_round_summary.csv",
-    )
+    answers: Dict[str, str] = {}
+    for q in question_set.questions:
+        with st.expander(f"{q.id}: {q.question}", expanded=True):
+            meta_col1, meta_col2 = st.columns(2)
+            with meta_col1:
+                st.caption(f"Target: {q.target}")
+            with meta_col2:
+                st.caption(f"Type: {q.question_type}")
+            st.write(q.rationale)
 
-    st.session_state.saved_json_path = str(json_path)
-    st.session_state.saved_csv_path = str(csv_path)
+            answers[q.id] = st.text_area(
+                label=f"Answer for {q.id}",
+                key=f"answer_round_{round_index}_{q.id}",
+                height=110,
+                placeholder="Type your answer here...",
+            )
+    return answers
 
 
-def start_study(title: str, narrative: str):
+def start_study(title: str, narrative: str, model_name: str) -> None:
     decision_input = DecisionInput(
         decision_id=str(uuid.uuid4()),
         title=title,
         narrative=narrative,
     )
 
-    initial_generator, question_generator, refiner = initialize_services()
+    initial_generator, question_generator, refiner = initialize_services(model_name)
 
     manager = StudyStateManager(
         decision_input=decision_input,
-        model_name=DEFAULT_MODEL_NAME,
+        model_name=model_name,
     )
 
     initial_output = initial_generator.run(decision_input)
@@ -245,16 +354,18 @@ def start_study(title: str, narrative: str):
     st.session_state.current_round_index = 0
     st.session_state.rating_submitted_rounds = set()
     st.session_state.answers_submitted_rounds = set()
-    st.session_state.saved_json_path = None
-    st.session_state.saved_csv_path = None
+    st.session_state.download_json_bytes = None
+    st.session_state.download_csv_bytes = None
+    st.session_state.download_json_filename = None
+    st.session_state.download_csv_filename = None
 
     st.session_state.initial_generator = initial_generator
     st.session_state.question_generator = question_generator
     st.session_state.refiner = refiner
 
 
-def generate_questions_for_next_round():
-    manager = st.session_state.manager
+def generate_questions_for_next_round() -> None:
+    manager: StudyStateManager = st.session_state.manager
     current_round = manager.get_current_round()
 
     if current_round is None:
@@ -265,7 +376,7 @@ def generate_questions_for_next_round():
         st.warning("Please submit the current round evaluation before generating the next question set.")
         return
 
-    if current_round.round_index >= DEFAULT_MAX_ROUNDS:
+    if current_round.round_index >= st.session_state.max_rounds:
         st.warning("Maximum number of rounds reached.")
         return
 
@@ -279,11 +390,10 @@ def generate_questions_for_next_round():
     )
 
     st.session_state.current_question_set = question_set
-    st.info(f"Generated clarification questions for Round {current_round.round_index + 1}.")
 
 
-def submit_answers_and_refine(round_index: int, raw_answers: Dict[str, str]):
-    manager = st.session_state.manager
+def submit_answers_and_refine(round_index: int, raw_answers: Dict[str, str]) -> None:
+    manager: StudyStateManager = st.session_state.manager
     current_round = manager.get_current_round()
     question_set = st.session_state.current_question_set
 
@@ -323,95 +433,206 @@ def submit_answers_and_refine(round_index: int, raw_answers: Dict[str, str]):
     st.session_state.current_round_index = round_index
     st.session_state.current_question_set = None
     st.session_state.answers_submitted_rounds.add(round_index)
-    st.success(f"Round {round_index} completed.")
 
 
-def complete_study():
-    latest_round_index = st.session_state.manager.get_current_round().round_index
-    if latest_round_index not in st.session_state.rating_submitted_rounds:
+def build_json_download(manager: StudyStateManager) -> tuple[bytes, str]:
+    payload = json.dumps(manager.as_dict(), ensure_ascii=False, indent=2).encode("utf-8")
+    filename = f"{manager.state.decision_id}_study_results.json"
+    return payload, filename
+
+
+def build_csv_download(manager: StudyStateManager) -> tuple[bytes, str]:
+    output = io.StringIO()
+    output.write(
+        "decision_id,round_index,n_alternatives,n_preferences,n_uncertainties,"
+        "faithfulness,completeness,clarity,usefulness,self_expression_support,notes\n"
+    )
+
+    for round_record in manager.state.rounds:
+        ev = round_record.evaluation
+        row = [
+            manager.state.decision_id,
+            str(round_record.round_index),
+            str(len(round_record.structured_output.alternatives)),
+            str(len(round_record.structured_output.preferences)),
+            str(len(round_record.structured_output.uncertainties)),
+            str(ev.faithfulness) if ev else "",
+            str(ev.completeness) if ev else "",
+            str(ev.clarity) if ev else "",
+            str(ev.usefulness) if ev else "",
+            str(ev.self_expression_support) if ev else "",
+            f"\"{(ev.notes or '').replace('\"', '\"\"')}\"" if ev else "\"\"",
+        ]
+        output.write(",".join(row) + "\n")
+
+    filename = f"{manager.state.decision_id}_round_summary.csv"
+    return output.getvalue().encode("utf-8"), filename
+
+
+def complete_study() -> None:
+    manager: StudyStateManager = st.session_state.manager
+    latest_round = manager.get_current_round()
+
+    if latest_round is None:
+        st.error("No round data found.")
+        return
+
+    if latest_round.round_index not in st.session_state.rating_submitted_rounds:
         st.warning("Please submit the latest round evaluation before finishing the study.")
         return
 
-    save_results()
+    json_bytes, json_filename = build_json_download(manager)
+    csv_bytes, csv_filename = build_csv_download(manager)
+
+    st.session_state.download_json_bytes = json_bytes
+    st.session_state.download_csv_bytes = csv_bytes
+    st.session_state.download_json_filename = json_filename
+    st.session_state.download_csv_filename = csv_filename
     st.session_state.study_completed = True
-    st.success("Study completed and results saved.")
 
 
-def main():
+def main() -> None:
     initialize_session_state()
-
-    st.title("Decision Articulation Study")
-    st.write(
-        "This app studies whether iterative LLM questioning helps users better express "
-        "their decision situation, preferences, and uncertainties."
-    )
+    apply_custom_styles()
 
     with st.sidebar:
-        st.header("Study Settings")
-        st.write(f"**Model:** {DEFAULT_MODEL_NAME}")
-        st.write(f"**Max Rounds:** {DEFAULT_MAX_ROUNDS}")
+        st.markdown("## Study Settings")
 
-        if st.button("Reset Session"):
-            for key in list(st.session_state.keys()):
-                del st.session_state[key]
-            st.rerun()
+        current_model = st.session_state.selected_model
+        model_options = ["gpt-5.4", "gpt-5.4-mini", "Custom"]
+        selected_index = model_options.index(current_model) if current_model in model_options else 1
+
+        model_option = st.selectbox(
+            "Model",
+            options=model_options,
+            index=selected_index,
+        )
+
+        custom_model_name = ""
+        if model_option == "Custom":
+            custom_model_name = st.text_input(
+                "Custom model name",
+                value=st.session_state.custom_model_name,
+                placeholder="Enter a model name",
+            )
+
+        max_rounds = st.slider(
+            "Max Rounds",
+            min_value=0,
+            max_value=5,
+            value=st.session_state.max_rounds,
+            step=1,
+        )
+
+        st.session_state.selected_model = model_option
+        st.session_state.custom_model_name = custom_model_name
+        st.session_state.max_rounds = max_rounds
+
+        effective_model_name = get_effective_model_name()
+
+        st.markdown("---")
+        st.markdown(
+            f"""
+            <div class="section-card">
+                <div class="small-muted">Current Configuration</div>
+                <div style="margin-top:0.55rem;">
+                    <span class="metric-chip">Model: {effective_model_name}</span>
+                    <span class="metric-chip">Max Rounds: {max_rounds}</span>
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+        if st.button("Reset Session", use_container_width=True):
+            reset_session()
+
+    st.title("Decision Articulation Study")
+    st.markdown(
+        '<div class="app-subtitle">Explore whether iterative LLM questioning helps users better express their decision context, preferences, and uncertainties.</div>',
+        unsafe_allow_html=True,
+    )
+
+    effective_model_name = get_effective_model_name()
 
     if not st.session_state.study_started:
+        st.markdown('<div class="section-card">', unsafe_allow_html=True)
         st.subheader("Start a New Decision Study")
 
-        title = st.text_input("Decision Title")
-        narrative = st.text_area("Decision Narrative", height=180)
+        col1, col2 = st.columns([1.4, 1])
 
-        if st.button("Start Study"):
+        with col1:
+            title = st.text_input(
+                "Decision Title",
+                placeholder="e.g. Should I invest in stocks or crypto?",
+            )
+
+        with col2:
+            st.markdown(
+                f"""
+                <div class="section-card" style="padding:0.9rem; margin-bottom:0;">
+                    <div class="small-muted">Selected setup</div>
+                    <div style="margin-top:0.55rem;">
+                        <span class="metric-chip">Model: {effective_model_name}</span>
+                        <span class="metric-chip">Max Rounds: {st.session_state.max_rounds}</span>
+                    </div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+
+        narrative = st.text_area(
+            "Decision Narrative",
+            height=220,
+            placeholder="Describe your situation, goals, constraints, concerns, and anything else that matters.",
+        )
+
+        if st.button("Start Study", use_container_width=True):
             if not title.strip() or not narrative.strip():
                 st.warning("Please provide both a decision title and a decision narrative.")
             else:
                 with st.spinner("Generating initial structured decision output..."):
-                    start_study(title.strip(), narrative.strip())
+                    start_study(title.strip(), narrative.strip(), effective_model_name)
                 st.rerun()
 
+        st.markdown("</div>", unsafe_allow_html=True)
         return
 
     manager: StudyStateManager = st.session_state.manager
 
-    st.divider()
+    st.markdown('<div class="section-card">', unsafe_allow_html=True)
     st.markdown("## Decision Input")
-    st.write(f"**Title:** {manager.state.title}")
-    st.write(f"**Narrative:** {manager.state.narrative}")
+    chip_col1, chip_col2 = st.columns([1, 1])
+    with chip_col1:
+        st.markdown(f"**Title:** {manager.state.title}")
+    with chip_col2:
+        st.markdown(f"**Narrative length:** {len(manager.state.narrative)} characters")
+    st.write(manager.state.narrative)
+    st.markdown("</div>", unsafe_allow_html=True)
 
-    st.divider()
     st.markdown("## Round History")
 
     for round_record in manager.state.rounds:
-        with st.container(border=True):
-            render_structured_output(round_record.round_index, round_record.structured_output)
+        st.markdown('<div class="section-card">', unsafe_allow_html=True)
+        render_structured_output(round_record.round_index, round_record.structured_output)
 
-            if round_record.evaluation:
-                st.markdown("**Submitted Evaluation**")
-                ev = round_record.evaluation
-                st.write(
-                    {
-                        "faithfulness": ev.faithfulness,
-                        "completeness": ev.completeness,
-                        "clarity": ev.clarity,
-                        "usefulness": ev.usefulness,
-                        "self_expression_support": ev.self_expression_support,
-                        "notes": ev.notes,
-                    }
-                )
-            elif round_record.round_index not in st.session_state.rating_submitted_rounds:
-                render_rating_form(round_record.round_index)
+        if round_record.evaluation:
+            render_submitted_evaluation(round_record.round_index, round_record.evaluation)
+        elif round_record.round_index not in st.session_state.rating_submitted_rounds:
+            render_rating_form(round_record.round_index)
+
+        st.markdown("</div>", unsafe_allow_html=True)
 
     current_round = manager.get_current_round()
     current_round_index = current_round.round_index if current_round else 0
 
-    if current_round_index < DEFAULT_MAX_ROUNDS:
-        st.divider()
+    if current_round_index < st.session_state.max_rounds:
+        st.markdown('<div class="section-card">', unsafe_allow_html=True)
         st.markdown("## Next Clarification Step")
 
         if st.session_state.current_question_set is None:
             if current_round_index in st.session_state.rating_submitted_rounds:
-                if st.button(f"Generate Questions for Round {current_round_index + 1}"):
+                if st.button(f"Generate Questions for Round {current_round_index + 1}", use_container_width=True):
                     with st.spinner("Generating clarification questions..."):
                         generate_questions_for_next_round()
                     st.rerun()
@@ -423,23 +644,50 @@ def main():
                 current_round_index + 1,
             )
 
-            if st.button(f"Submit Answers and Generate Round {current_round_index + 1} Output"):
+            if st.button(f"Submit Answers and Generate Round {current_round_index + 1} Output", use_container_width=True):
                 with st.spinner("Refining structured decision output..."):
                     submit_answers_and_refine(current_round_index + 1, raw_answers)
                 st.rerun()
 
+        st.markdown("</div>", unsafe_allow_html=True)
+
     else:
-        st.divider()
+        st.markdown('<div class="section-card">', unsafe_allow_html=True)
         st.markdown("## Finish Study")
-        if st.button("Complete Study and Save Results"):
+        st.caption("You have reached the selected maximum number of rounds.")
+
+        if st.button("Complete Study", use_container_width=True):
             complete_study()
             st.rerun()
 
+        st.markdown("</div>", unsafe_allow_html=True)
+
     if st.session_state.study_completed:
-        st.divider()
-        st.markdown("## Saved Results")
-        st.write(f"**JSON Log:** `{st.session_state.saved_json_path}`")
-        st.write(f"**CSV Summary:** `{st.session_state.saved_csv_path}`")
+        st.markdown('<div class="section-card">', unsafe_allow_html=True)
+        st.markdown("## Download Results")
+        st.success("Study completed. Download your results below.")
+
+        col1, col2 = st.columns(2)
+
+        with col1:
+            st.download_button(
+                label="Download JSON Results",
+                data=st.session_state.download_json_bytes,
+                file_name=st.session_state.download_json_filename,
+                mime="application/json",
+                use_container_width=True,
+            )
+
+        with col2:
+            st.download_button(
+                label="Download CSV Summary",
+                data=st.session_state.download_csv_bytes,
+                file_name=st.session_state.download_csv_filename,
+                mime="text/csv",
+                use_container_width=True,
+            )
+
+        st.markdown("</div>", unsafe_allow_html=True)
 
 
 if __name__ == "__main__":
