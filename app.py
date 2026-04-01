@@ -24,6 +24,7 @@ from src.pipeline.initial_generator import InitialGenerator
 from src.pipeline.question_generator import QuestionGenerator
 from src.pipeline.refiner import Refiner
 from src.utils.llm_client import OpenAILLMClient
+from src.evaluation.rubric import USER_RATING_RUBRIC
 
 
 st.set_page_config(
@@ -62,7 +63,7 @@ def apply_custom_styles() -> None:
             margin-bottom: 1rem;
             box-shadow: 0 4px 14px rgba(0, 0, 0, 0.05);
         }
-
+        
         .metric-chip {
             display: inline-block;
             padding: 0.36rem 0.74rem;
@@ -133,7 +134,24 @@ def apply_custom_styles() -> None:
             border-radius: 12px !important;
             border: 1px solid #cbd5e1 !important;
         }
-
+        
+        .tooltip-question {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 18px;
+            height: 18px;
+            margin-left: 6px;
+            border-radius: 999px;
+            background: #e0e7ff;
+            color: #3730a3;
+            font-size: 0.78rem;
+            font-weight: 800;
+            border: 1px solid #c7d2fe;
+            cursor: help;
+            vertical-align: middle;
+        }
+                
         div[data-testid="stExpander"] {
             border-radius: 14px !important;
             border: 1px solid #dbe2ea !important;
@@ -382,6 +400,19 @@ def render_submitted_evaluation(round_index: int, evaluation: RoundEvaluation) -
     if evaluation.notes:
         st.markdown("**Notes**")
         st.write(evaluation.notes)
+
+
+def render_rating_label(label: str, rubric_key: str) -> None:
+    definition = USER_RATING_RUBRIC[rubric_key]["definition"].replace('"', "&quot;")
+    st.markdown(
+        f"""
+        <div class="star-label">
+            {label}
+            <span class="tooltip-question" title="{definition}">?</span>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
 
 def numeric_rating_input(label: str, key_prefix: str) -> int:
