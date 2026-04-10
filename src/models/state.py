@@ -5,6 +5,7 @@ from src.models.schemas import (
     DecisionInput,
     DecisionStudyState,
     RoundEvaluation,
+    RoundImprovementEvaluation,
     RoundRecord,
     StructuredDecisionOutput,
     ClarificationQuestionSet,
@@ -52,10 +53,23 @@ class StudyStateManager:
                 return
         raise ValueError(f"Round {round_index} not found.")
 
+    def attach_ai_evaluation(self, round_index: int, ai_evaluation: RoundImprovementEvaluation) -> None:
+        for round_record in self.state.rounds:
+            if round_record.round_index == round_index:
+                round_record.ai_evaluation = RoundImprovementEvaluation(**ai_evaluation.model_dump())
+                return
+        raise ValueError(f"Round {round_index} not found.")
+
     def get_current_round(self) -> Optional[RoundRecord]:
         if not self.state.rounds:
             return None
         return self.state.rounds[-1]
+
+    def get_round(self, round_index: int) -> Optional[RoundRecord]:
+        for round_record in self.state.rounds:
+            if round_record.round_index == round_index:
+                return round_record
+        return None
 
     def get_prior_qa_history_as_text(self) -> str:
         if len(self.state.rounds) <= 1:

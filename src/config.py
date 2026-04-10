@@ -19,7 +19,7 @@ DEFAULT_MAX_ROUNDS = 2
 INITIAL_GENERATION_PROMPT_PATH = PROMPTS_DIR / "initial_generation.txt"
 QUESTION_GENERATION_PROMPT_PATH = PROMPTS_DIR / "question_generation.txt"
 REFINEMENT_PROMPT_PATH = PROMPTS_DIR / "refinement.txt"
-
+ROUND_IMPROVEMENT_EVALUATION_PROMPT_PATH = PROMPTS_DIR / "round_improvement_evaluation.txt"
 
 for directory in [DATA_DIR, LOGS_DIR, EVALUATIONS_DIR, RAW_DIR, PROCESSED_DIR]:
     directory.mkdir(parents=True, exist_ok=True)

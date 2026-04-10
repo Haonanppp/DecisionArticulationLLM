@@ -117,6 +117,19 @@ class RoundEvaluation(BaseModel):
     notes: Optional[str] = None
 
 
+class RoundImprovementEvaluation(BaseModel):
+    compared_to_round: int
+    improved: bool
+    improvement_score: int = Field(ge=1, le=5)
+    improvement_magnitude: Literal["marginal", "moderate", "substantial", "none", "negative"]
+    dimension_scores: Dict[str, int]
+    dimension_changes: Dict[str, Literal["improved", "unchanged", "worsened"]]
+    new_information_used: List[str] = Field(default_factory=list)
+    key_improvements: List[str] = Field(default_factory=list)
+    remaining_issues: List[str] = Field(default_factory=list)
+    reasoning_summary: str
+
+
 class DecisionInput(BaseModel):
     decision_id: str
     title: str
@@ -129,6 +142,7 @@ class RoundRecord(BaseModel):
     user_answers: List[UserAnswer] = Field(default_factory=list)
     structured_output: StructuredDecisionOutput
     evaluation: Optional[RoundEvaluation] = None
+    ai_evaluation: Optional[RoundImprovementEvaluation] = None
 
 
 class DecisionStudyState(BaseModel):

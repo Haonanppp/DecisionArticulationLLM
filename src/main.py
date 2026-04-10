@@ -9,8 +9,10 @@ from src.config import (
     INITIAL_GENERATION_PROMPT_PATH,
     QUESTION_GENERATION_PROMPT_PATH,
     REFINEMENT_PROMPT_PATH,
+    ROUND_IMPROVEMENT_EVALUATION_PROMPT_PATH,
     LOGS_DIR,
     PROCESSED_DIR,
+    EVALUATIONS_DIR,
 )
 from src.models.schemas import (
     ClarificationQuestion,
@@ -20,6 +22,7 @@ from src.models.schemas import (
 from src.pipeline.initial_generator import InitialGenerator
 from src.pipeline.question_generator import QuestionGenerator
 from src.pipeline.refiner import Refiner
+from src.pipeline.improvement_evaluator import ImprovementEvaluator
 from src.pipeline.controller import DecisionStudyController
 from src.logging.logger import StudyLogger
 from src.logging.export import StudyExporter
@@ -67,6 +70,46 @@ def display_structured_output(round_index: int, structured_output) -> None:
             print(f"- {note}")
 
 
+def display_ai_evaluation(round_index: int, manager) -> None:
+    round_record = manager.get_round(round_index)
+    if round_record is None or round_record.ai_evaluation is None:
+        return
+
+    ai_eval = round_record.ai_evaluation
+
+    print(f"\n=== AI Improvement Evaluation for Round {round_index} ===")
+    print(f"Compared to round: {ai_eval.compared_to_round}")
+    print(f"Improved: {ai_eval.improved}")
+    print(f"Improvement score: {ai_eval.improvement_score}")
+    print(f"Improvement magnitude: {ai_eval.improvement_magnitude}")
+
+    print("\nDimension Scores:")
+    for k, v in ai_eval.dimension_scores.items():
+        print(f"- {k}: {v}")
+
+    print("\nDimension Changes:")
+    for k, v in ai_eval.dimension_changes.items():
+        print(f"- {k}: {v}")
+
+    if ai_eval.new_information_used:
+        print("\nNew Information Used:")
+        for item in ai_eval.new_information_used:
+            print(f"- {item}")
+
+    if ai_eval.key_improvements:
+        print("\nKey Improvements:")
+        for item in ai_eval.key_improvements:
+            print(f"- {item}")
+
+    if ai_eval.remaining_issues:
+        print("\nRemaining Issues:")
+        for item in ai_eval.remaining_issues:
+            print(f"- {item}")
+
+    print("\nReasoning Summary:")
+    print(ai_eval.reasoning_summary)
+
+
 def answer_provider(round_index: int, questions: List[ClarificationQuestion]) -> List[UserAnswer]:
     print(f"\n--- Clarification Round {round_index} ---")
     answers = []
@@ -99,12 +142,17 @@ def main() -> None:
     initial_generator = InitialGenerator(llm_client, INITIAL_GENERATION_PROMPT_PATH)
     question_generator = QuestionGenerator(llm_client, QUESTION_GENERATION_PROMPT_PATH)
     refiner = Refiner(llm_client, REFINEMENT_PROMPT_PATH)
+    improvement_evaluator = ImprovementEvaluator(
+        llm_client,
+        ROUND_IMPROVEMENT_EVALUATION_PROMPT_PATH,
+    )
 
     controller = DecisionStudyController(
         model_name=DEFAULT_MODEL_NAME,
         initial_generator=initial_generator,
         question_generator=question_generator,
         refiner=refiner,
+        improvement_evaluator=improvement_evaluator,
         max_rounds=DEFAULT_MAX_ROUNDS,
     )
 
@@ -115,18 +163,34 @@ def main() -> None:
         round_display_callback=display_structured_output,
     )
 
+    for round_index in range(1, len(manager.state.rounds)):
+        display_ai_evaluation(round_index, manager)
+
     logger = StudyLogger(LOGS_DIR)
     log_path = logger.save_state(manager)
 
     exporter = StudyExporter()
-    csv_path = exporter.export_round_summary_csv(
+
+    round_csv_path = exporter.export_round_summary_csv(
         manager,
         PROCESSED_DIR / f"{decision_input.decision_id}_round_summary.csv",
     )
 
+    ai_eval_json_path = exporter.export_ai_evaluations_json(
+        manager,
+        EVALUATIONS_DIR / f"{decision_input.decision_id}_ai_evaluations.json",
+    )
+
+    ai_eval_csv_path = exporter.export_ai_evaluations_csv(
+        manager,
+        EVALUATIONS_DIR / f"{decision_input.decision_id}_ai_evaluations.csv",
+    )
+
     print("\nStudy completed.")
     print(f"Saved JSON log to: {log_path}")
-    print(f"Saved CSV summary to: {csv_path}")
+    print(f"Saved round summary CSV to: {round_csv_path}")
+    print(f"Saved AI evaluation JSON to: {ai_eval_json_path}")
+    print(f"Saved AI evaluation CSV to: {ai_eval_csv_path}")
 
 
 if __name__ == "__main__":

@@ -11,6 +11,7 @@ from src.config import (
     INITIAL_GENERATION_PROMPT_PATH,
     QUESTION_GENERATION_PROMPT_PATH,
     REFINEMENT_PROMPT_PATH,
+    ROUND_IMPROVEMENT_EVALUATION_PROMPT_PATH,
 )
 from src.models.schemas import (
     ClarificationQuestionSet,
@@ -22,6 +23,7 @@ from src.models.schemas import (
 from src.models.state import StudyStateManager
 from src.pipeline.initial_generator import InitialGenerator
 from src.pipeline.question_generator import QuestionGenerator
+from src.pipeline.improvement_evaluator import ImprovementEvaluator
 from src.pipeline.refiner import Refiner
 from src.utils.llm_client import OpenAILLMClient
 from src.evaluation.rubric import USER_RATING_RUBRIC
@@ -260,9 +262,14 @@ def initialize_session_state() -> None:
         "download_csv_bytes": None,
         "download_json_filename": None,
         "download_csv_filename": None,
+        "download_ai_json_bytes": None,
+        "download_ai_csv_bytes": None,
+        "download_ai_json_filename": None,
+        "download_ai_csv_filename": None,
         "initial_generator": None,
         "question_generator": None,
         "refiner": None,
+        "improvement_evaluator": None,
     }
 
     for key, value in defaults.items():
@@ -288,7 +295,11 @@ def initialize_services(model_name: str):
     initial_generator = InitialGenerator(llm_client, INITIAL_GENERATION_PROMPT_PATH)
     question_generator = QuestionGenerator(llm_client, QUESTION_GENERATION_PROMPT_PATH)
     refiner = Refiner(llm_client, REFINEMENT_PROMPT_PATH)
-    return initial_generator, question_generator, refiner
+    improvement_evaluator = ImprovementEvaluator(
+        llm_client,
+        ROUND_IMPROVEMENT_EVALUATION_PROMPT_PATH,
+    )
+    return initial_generator, question_generator, refiner, improvement_evaluator
 
 
 def render_structured_output(round_index: int, structured_output: StructuredDecisionOutput) -> None:
@@ -400,6 +411,43 @@ def render_submitted_evaluation(round_index: int, evaluation: RoundEvaluation) -
     if evaluation.notes:
         st.markdown("**Notes**")
         st.write(evaluation.notes)
+
+def render_ai_evaluation(round_index: int, ai_evaluation) -> None:
+    st.markdown(f"### AI Improvement Evaluation for Round {round_index}")
+
+    top1, top2, top3 = st.columns(3)
+    top1.metric("Improved", "Yes" if ai_evaluation.improved else "No")
+    top2.metric("Improvement Score", ai_evaluation.improvement_score)
+    top3.metric("Magnitude", ai_evaluation.improvement_magnitude)
+
+    st.markdown("**Dimension Scores**")
+    cols = st.columns(5)
+    cols[0].metric("Faithfulness", ai_evaluation.dimension_scores.get("faithfulness", ""))
+    cols[1].metric("Completeness", ai_evaluation.dimension_scores.get("completeness", ""))
+    cols[2].metric("Clarity", ai_evaluation.dimension_scores.get("clarity", ""))
+    cols[3].metric("Usefulness", ai_evaluation.dimension_scores.get("usefulness", ""))
+    cols[4].metric("Non-distortion", ai_evaluation.dimension_scores.get("non_distortion", ""))
+
+    st.markdown("**Dimension Changes**")
+    st.write(ai_evaluation.dimension_changes)
+
+    if ai_evaluation.new_information_used:
+        st.markdown("**New Information Used**")
+        for item in ai_evaluation.new_information_used:
+            st.write(f"- {item}")
+
+    if ai_evaluation.key_improvements:
+        st.markdown("**Key Improvements**")
+        for item in ai_evaluation.key_improvements:
+            st.write(f"- {item}")
+
+    if ai_evaluation.remaining_issues:
+        st.markdown("**Remaining Issues**")
+        for item in ai_evaluation.remaining_issues:
+            st.write(f"- {item}")
+
+    st.markdown("**Reasoning Summary**")
+    st.write(ai_evaluation.reasoning_summary)
 
 
 def render_rating_label(label: str, rubric_key: str) -> None:
@@ -519,7 +567,7 @@ def start_study(title: str, narrative: str, model_name: str) -> None:
         narrative=narrative,
     )
 
-    initial_generator, question_generator, refiner = initialize_services(model_name)
+    initial_generator, question_generator, refiner, improvement_evaluator = initialize_services(model_name)
 
     manager = StudyStateManager(
         decision_input=decision_input,
@@ -541,10 +589,15 @@ def start_study(title: str, narrative: str, model_name: str) -> None:
     st.session_state.download_csv_bytes = None
     st.session_state.download_json_filename = None
     st.session_state.download_csv_filename = None
+    st.session_state.download_ai_json_bytes = None
+    st.session_state.download_ai_csv_bytes = None
+    st.session_state.download_ai_json_filename = None
+    st.session_state.download_ai_csv_filename = None
 
     st.session_state.initial_generator = initial_generator
     st.session_state.question_generator = question_generator
     st.session_state.refiner = refiner
+    st.session_state.improvement_evaluator = improvement_evaluator
 
 
 def generate_questions_for_next_round() -> None:
@@ -613,6 +666,17 @@ def submit_answers_and_refine(round_index: int, raw_answers: Dict[str, str]) -> 
         user_answers=user_answers,
     )
 
+    ai_eval = st.session_state.improvement_evaluator.run(
+        decision_title=manager.state.title,
+        decision_narrative=manager.state.narrative,
+        previous_round_index=round_index - 1,
+        previous_round_output=current_round.structured_output,
+        current_round_output=refined_output,
+        clarification_questions=question_set,
+        user_answers=user_answers,
+    )
+    manager.attach_ai_evaluation(round_index, ai_eval)
+
     st.session_state.current_round_index = round_index
     st.session_state.current_question_set = None
     st.session_state.answers_submitted_rounds.add(round_index)
@@ -653,6 +717,78 @@ def build_csv_download(manager: StudyStateManager) -> tuple[bytes, str]:
     filename = f"{manager.state.decision_id}_round_summary.csv"
     return output.getvalue().encode("utf-8"), filename
 
+def build_ai_evaluation_json_download(manager: StudyStateManager) -> tuple[bytes, str]:
+    payload = {
+        "decision_id": manager.state.decision_id,
+        "title": manager.state.title,
+        "narrative": manager.state.narrative,
+        "ai_evaluations": [],
+    }
+
+    for round_record in manager.state.rounds:
+        if round_record.ai_evaluation is None:
+            continue
+
+        payload["ai_evaluations"].append({
+            "round_index": round_record.round_index,
+            "compared_to_round": round_record.ai_evaluation.compared_to_round,
+            "improved": round_record.ai_evaluation.improved,
+            "improvement_score": round_record.ai_evaluation.improvement_score,
+            "improvement_magnitude": round_record.ai_evaluation.improvement_magnitude,
+            "dimension_scores": round_record.ai_evaluation.dimension_scores,
+            "dimension_changes": round_record.ai_evaluation.dimension_changes,
+            "new_information_used": round_record.ai_evaluation.new_information_used,
+            "key_improvements": round_record.ai_evaluation.key_improvements,
+            "remaining_issues": round_record.ai_evaluation.remaining_issues,
+            "reasoning_summary": round_record.ai_evaluation.reasoning_summary,
+        })
+
+    data = json.dumps(payload, ensure_ascii=False, indent=2).encode("utf-8")
+    filename = f"{manager.state.decision_id}_ai_evaluations.json"
+    return data, filename
+
+
+def build_ai_evaluation_csv_download(manager: StudyStateManager) -> tuple[bytes, str]:
+    output = io.StringIO()
+    output.write(
+        "decision_id,round_index,compared_to_round,improved,improvement_score,improvement_magnitude,"
+        "faithfulness_score,completeness_score,clarity_score,usefulness_score,non_distortion_score,"
+        "faithfulness_change,completeness_change,clarity_change,usefulness_change,non_distortion_change,"
+        "new_information_used,key_improvements,remaining_issues,reasoning_summary\n"
+    )
+
+    for round_record in manager.state.rounds:
+        ai_eval = round_record.ai_evaluation
+        if ai_eval is None:
+            continue
+
+        row = [
+            manager.state.decision_id,
+            str(round_record.round_index),
+            str(ai_eval.compared_to_round),
+            str(ai_eval.improved),
+            str(ai_eval.improvement_score),
+            ai_eval.improvement_magnitude,
+            str(ai_eval.dimension_scores.get("faithfulness", "")),
+            str(ai_eval.dimension_scores.get("completeness", "")),
+            str(ai_eval.dimension_scores.get("clarity", "")),
+            str(ai_eval.dimension_scores.get("usefulness", "")),
+            str(ai_eval.dimension_scores.get("non_distortion", "")),
+            ai_eval.dimension_changes.get("faithfulness", ""),
+            ai_eval.dimension_changes.get("completeness", ""),
+            ai_eval.dimension_changes.get("clarity", ""),
+            ai_eval.dimension_changes.get("usefulness", ""),
+            ai_eval.dimension_changes.get("non_distortion", ""),
+            f"\"{' | '.join(ai_eval.new_information_used).replace('\"', '\"\"')}\"",
+            f"\"{' | '.join(ai_eval.key_improvements).replace('\"', '\"\"')}\"",
+            f"\"{' | '.join(ai_eval.remaining_issues).replace('\"', '\"\"')}\"",
+            f"\"{ai_eval.reasoning_summary.replace('\"', '\"\"')}\"",
+        ]
+        output.write(",".join(row) + "\n")
+
+    filename = f"{manager.state.decision_id}_ai_evaluations.csv"
+    return output.getvalue().encode("utf-8"), filename
+
 
 def complete_study() -> None:
     manager: StudyStateManager = st.session_state.manager
@@ -668,11 +804,19 @@ def complete_study() -> None:
 
     json_bytes, json_filename = build_json_download(manager)
     csv_bytes, csv_filename = build_csv_download(manager)
+    ai_json_bytes, ai_json_filename = build_ai_evaluation_json_download(manager)
+    ai_csv_bytes, ai_csv_filename = build_ai_evaluation_csv_download(manager)
 
     st.session_state.download_json_bytes = json_bytes
     st.session_state.download_csv_bytes = csv_bytes
     st.session_state.download_json_filename = json_filename
     st.session_state.download_csv_filename = csv_filename
+
+    st.session_state.download_ai_json_bytes = ai_json_bytes
+    st.session_state.download_ai_csv_bytes = ai_csv_bytes
+    st.session_state.download_ai_json_filename = ai_json_filename
+    st.session_state.download_ai_csv_filename = ai_csv_filename
+
     st.session_state.study_completed = True
 
 
@@ -820,12 +964,25 @@ def main() -> None:
 
     if st.session_state.study_completed:
         st.markdown('<div class="section-card">', unsafe_allow_html=True)
+        st.markdown("## AI Improvement Evaluations")
+
+        ai_rounds = [r for r in manager.state.rounds if r.ai_evaluation is not None]
+        if ai_rounds:
+            for round_record in ai_rounds:
+                with st.expander(f"Round {round_record.round_index} AI Evaluation",
+                                 expanded=(round_record.round_index == ai_rounds[-1].round_index)):
+                    render_ai_evaluation(round_record.round_index, round_record.ai_evaluation)
+        else:
+            st.info("No AI improvement evaluations available.")
+
+        st.markdown("</div>", unsafe_allow_html=True)
+
+        st.markdown('<div class="section-card">', unsafe_allow_html=True)
         st.markdown("## Download Results")
         st.success("Study completed. Download your results below.")
 
-        col1, col2 = st.columns(2)
-
-        with col1:
+        row1_col1, row1_col2 = st.columns(2)
+        with row1_col1:
             st.download_button(
                 label="Download JSON Results",
                 data=st.session_state.download_json_bytes,
@@ -833,12 +990,29 @@ def main() -> None:
                 mime="application/json",
                 use_container_width=True,
             )
-
-        with col2:
+        with row1_col2:
             st.download_button(
                 label="Download CSV Summary",
                 data=st.session_state.download_csv_bytes,
                 file_name=st.session_state.download_csv_filename,
+                mime="text/csv",
+                use_container_width=True,
+            )
+
+        row2_col1, row2_col2 = st.columns(2)
+        with row2_col1:
+            st.download_button(
+                label="Download AI Evaluation JSON",
+                data=st.session_state.download_ai_json_bytes,
+                file_name=st.session_state.download_ai_json_filename,
+                mime="application/json",
+                use_container_width=True,
+            )
+        with row2_col2:
+            st.download_button(
+                label="Download AI Evaluation CSV",
+                data=st.session_state.download_ai_csv_bytes,
+                file_name=st.session_state.download_ai_csv_filename,
                 mime="text/csv",
                 use_container_width=True,
             )
