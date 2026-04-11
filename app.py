@@ -416,7 +416,7 @@ def render_ai_evaluation(round_index: int, ai_evaluation) -> None:
     st.markdown(f"### AI Improvement Evaluation for Round {round_index}")
 
     top1, top2, top3 = st.columns(3)
-    top1.metric("Improved", "Yes" if ai_evaluation.improved else "No")
+    top1.metric("Direction", ai_evaluation.direction)
     top2.metric("Improvement Score", ai_evaluation.improvement_score)
     top3.metric("Magnitude", ai_evaluation.improvement_magnitude)
 
