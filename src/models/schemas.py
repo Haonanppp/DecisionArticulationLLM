@@ -20,6 +20,18 @@ EthicsCategory = Literal[
 
 ImpactType = Literal["direct", "indirect"]
 
+ImprovementDirection = Literal["improved", "unchanged", "worsened"]
+DimensionChange = Literal["improved", "unchanged", "worsened"]
+ImprovementMagnitude = Literal[
+    "none",
+    "slight_positive",
+    "moderate_positive",
+    "strong_positive",
+    "slight_negative",
+    "moderate_negative",
+    "strong_negative",
+]
+
 
 class Alternative(BaseModel):
     id: str
@@ -119,11 +131,11 @@ class RoundEvaluation(BaseModel):
 
 class RoundImprovementEvaluation(BaseModel):
     compared_to_round: int
-    improved: bool
-    improvement_score: int = Field(ge=1, le=5)
-    improvement_magnitude: Literal["marginal", "moderate", "substantial", "none", "negative"]
+    direction: ImprovementDirection
+    improvement_score: int = Field(ge=-5, le=5)
+    improvement_magnitude: ImprovementMagnitude
     dimension_scores: Dict[str, int]
-    dimension_changes: Dict[str, Literal["improved", "unchanged", "worsened"]]
+    dimension_changes: Dict[str, DimensionChange]
     new_information_used: List[str] = Field(default_factory=list)
     key_improvements: List[str] = Field(default_factory=list)
     remaining_issues: List[str] = Field(default_factory=list)

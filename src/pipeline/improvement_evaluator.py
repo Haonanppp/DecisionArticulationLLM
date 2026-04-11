@@ -47,6 +47,58 @@ class ImprovementEvaluator:
         )
         return prompt
 
+    @staticmethod
+    def _normalize_direction_and_magnitude(response_json: Dict[str, Any]) -> Dict[str, Any]:
+        score = response_json.get("improvement_score")
+
+        if "direction" not in response_json:
+            if isinstance(score, int):
+                if score > 0:
+                    response_json["direction"] = "improved"
+                elif score < 0:
+                    response_json["direction"] = "worsened"
+                else:
+                    response_json["direction"] = "unchanged"
+            else:
+                response_json["direction"] = "unchanged"
+
+        if "improvement_magnitude" not in response_json and isinstance(score, int):
+            abs_score = abs(score)
+            if score == 0:
+                response_json["improvement_magnitude"] = "none"
+            elif score > 0:
+                if abs_score <= 1:
+                    response_json["improvement_magnitude"] = "slight_positive"
+                elif abs_score <= 3:
+                    response_json["improvement_magnitude"] = "moderate_positive"
+                else:
+                    response_json["improvement_magnitude"] = "strong_positive"
+            else:
+                if abs_score <= 1:
+                    response_json["improvement_magnitude"] = "slight_negative"
+                elif abs_score <= 3:
+                    response_json["improvement_magnitude"] = "moderate_negative"
+                else:
+                    response_json["improvement_magnitude"] = "strong_negative"
+
+        return response_json
+
+    @staticmethod
+    def _normalize_dimension_scores(response_json: Dict[str, Any]) -> Dict[str, Any]:
+        dimension_scores = response_json.get("dimension_scores", {})
+        for key in ["faithfulness", "completeness", "clarity", "usefulness", "non_distortion"]:
+            if key not in dimension_scores:
+                dimension_scores[key] = 0
+        response_json["dimension_scores"] = dimension_scores
+
+        dimension_changes = response_json.get("dimension_changes", {})
+        for key in ["faithfulness", "completeness", "clarity", "usefulness", "non_distortion"]:
+            if key not in dimension_changes:
+                dimension_changes[key] = "unchanged"
+        response_json["dimension_changes"] = dimension_changes
+
+        return response_json
+
     def run(
         self,
         decision_title: str,
@@ -67,4 +119,6 @@ class ImprovementEvaluator:
         )
         response_json: Dict[str, Any] = self.llm_client.generate_json(prompt)
         response_json["compared_to_round"] = previous_round_index
+        response_json = self._normalize_direction_and_magnitude(response_json)
+        response_json = self._normalize_dimension_scores(response_json)
         return RoundImprovementEvaluation(**response_json)

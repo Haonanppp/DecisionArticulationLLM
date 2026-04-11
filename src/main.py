@@ -70,16 +70,10 @@ def display_structured_output(round_index: int, structured_output) -> None:
             print(f"- {note}")
 
 
-def display_ai_evaluation(round_index: int, manager) -> None:
-    round_record = manager.get_round(round_index)
-    if round_record is None or round_record.ai_evaluation is None:
-        return
-
-    ai_eval = round_record.ai_evaluation
-
+def display_ai_evaluation(round_index: int, ai_eval) -> None:
     print(f"\n=== AI Improvement Evaluation for Round {round_index} ===")
     print(f"Compared to round: {ai_eval.compared_to_round}")
-    print(f"Improved: {ai_eval.improved}")
+    print(f"Direction: {ai_eval.direction}")
     print(f"Improvement score: {ai_eval.improvement_score}")
     print(f"Improvement magnitude: {ai_eval.improvement_magnitude}")
 
