@@ -732,7 +732,7 @@ def build_ai_evaluation_json_download(manager: StudyStateManager) -> tuple[bytes
         payload["ai_evaluations"].append({
             "round_index": round_record.round_index,
             "compared_to_round": round_record.ai_evaluation.compared_to_round,
-            "improved": round_record.ai_evaluation.improved,
+            "direction": round_record.ai_evaluation.direction,
             "improvement_score": round_record.ai_evaluation.improvement_score,
             "improvement_magnitude": round_record.ai_evaluation.improvement_magnitude,
             "dimension_scores": round_record.ai_evaluation.dimension_scores,
@@ -751,7 +751,7 @@ def build_ai_evaluation_json_download(manager: StudyStateManager) -> tuple[bytes
 def build_ai_evaluation_csv_download(manager: StudyStateManager) -> tuple[bytes, str]:
     output = io.StringIO()
     output.write(
-        "decision_id,round_index,compared_to_round,improved,improvement_score,improvement_magnitude,"
+        "decision_id,round_index,compared_to_round,direction,improvement_score,improvement_magnitude,"
         "faithfulness_score,completeness_score,clarity_score,usefulness_score,non_distortion_score,"
         "faithfulness_change,completeness_change,clarity_change,usefulness_change,non_distortion_change,"
         "new_information_used,key_improvements,remaining_issues,reasoning_summary\n"
@@ -766,7 +766,7 @@ def build_ai_evaluation_csv_download(manager: StudyStateManager) -> tuple[bytes,
             manager.state.decision_id,
             str(round_record.round_index),
             str(ai_eval.compared_to_round),
-            str(ai_eval.improved),
+            ai_eval.direction,
             str(ai_eval.improvement_score),
             ai_eval.improvement_magnitude,
             str(ai_eval.dimension_scores.get("faithfulness", "")),
